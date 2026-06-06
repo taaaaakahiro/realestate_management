@@ -6,7 +6,7 @@ export function Nav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold text-slate-900">
           <span>🏠</span>
-          <span>不動産回収率マネージャー</span>
+          <span>PropFolio</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium">
           <Link

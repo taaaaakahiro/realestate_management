@@ -8,16 +8,19 @@ import {
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
 import { formatPostalCode } from "@/features/property/types";
+import { LoanPanel } from "@/features/loan/components/LoanPanel";
+import { propertyTransactions } from "@/features/loan/service";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
 import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
+import { TODAY_ISO } from "@/shared/lib/clock";
 import { useStore } from "@/data/store";
 
 export function PropertyDetailView() {
   const id = useSearchParams().get("id");
-  const { properties, transactions } = useStore();
+  const { properties, transactions, loans } = useStore();
   const property = properties.find((p) => p.id === id);
 
   if (!property) {
@@ -31,7 +34,8 @@ export function PropertyDetailView() {
     );
   }
 
-  const propertyTxns = transactions.filter((t) => t.propertyId === property.id);
+  const loan = loans.find((l) => l.propertyId === property.id);
+  const propertyTxns = propertyTransactions(property.id, transactions, loans, TODAY_ISO);
   const a = analyzeProperty(property, propertyTxns);
   const series = buildCumulativeSeries(property, propertyTxns);
   const profit = a.netProfit >= 0;
@@ -104,6 +108,9 @@ export function PropertyDetailView() {
           </p>
         </Card>
       </div>
+
+      {/* 融資・返済 */}
+      {loan && <LoanPanel loan={loan} />}
 
       {/* 推移チャート */}
       <Card>

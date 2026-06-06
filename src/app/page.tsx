@@ -3,16 +3,15 @@
 import { analyzeProperty, summarizePortfolio } from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
+import { propertyTransactions } from "@/features/loan/service";
+import { TODAY_ISO } from "@/shared/lib/clock";
 import { useStore } from "@/data/store";
 
 export default function DashboardPage() {
-  const { properties, transactions } = useStore();
+  const { properties, transactions, loans } = useStore();
 
   const analytics = properties.map((p) =>
-    analyzeProperty(
-      p,
-      transactions.filter((t) => t.propertyId === p.id),
-    ),
+    analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
   );
   const summary = summarizePortfolio(analytics);
   const ranked = [...analytics].sort((a, b) => b.recoveryRate - a.recoveryRate);

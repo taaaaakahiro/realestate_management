@@ -3,17 +3,16 @@
 import Link from "next/link";
 import { analyzeProperty } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
+import { propertyTransactions } from "@/features/loan/service";
+import { TODAY_ISO } from "@/shared/lib/clock";
 import { Button } from "@/shared/components/ui/Field";
 import { useStore } from "@/data/store";
 
 export default function PropertiesPage() {
-  const { properties, transactions } = useStore();
+  const { properties, transactions, loans } = useStore();
 
   const analytics = properties.map((p) =>
-    analyzeProperty(
-      p,
-      transactions.filter((t) => t.propertyId === p.id),
-    ),
+    analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
   );
 
   return (

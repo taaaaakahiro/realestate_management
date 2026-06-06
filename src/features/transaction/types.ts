@@ -10,7 +10,8 @@ export type ExpenseCategory =
   | "固定資産税"
   | "不動産取得税"
   | "管理費"
-  | "ローン返済"
+  | "ローン元本"
+  | "ローン利息"
   | "その他支出";
 
 export type TransactionCategory = IncomeCategory | ExpenseCategory;
@@ -21,6 +22,10 @@ export const INCOME_CATEGORIES: IncomeCategory[] = [
   "更新料",
   "その他収入",
 ];
+/**
+ * 手動登録できる支出科目。
+ * ローン元本・ローン利息は融資モデルから自動計上するため、ここには含めない。
+ */
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "広告料",
   "修繕費",
@@ -28,7 +33,6 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "固定資産税",
   "不動産取得税",
   "管理費",
-  "ローン返済",
   "その他支出",
 ];
 
