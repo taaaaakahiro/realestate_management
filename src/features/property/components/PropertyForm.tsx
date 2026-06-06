@@ -52,16 +52,18 @@ export function PropertyForm() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const num = (k: string) => Number(fd.get(k));
+    // 千円単位で入力された値を円に変換
+    const sen = (k: string) => Math.round((Number(fd.get(k)) || 0) * 1000);
 
     const name = String(fd.get("name") ?? "").trim();
     const type = String(fd.get("type") ?? "") as PropertyType;
     const purchaseDate = String(fd.get("purchaseDate") ?? "");
-    const purchasePrice = num("purchasePrice");
-    const realEstateAcquisitionTax = num("realEstateAcquisitionTax");
-    const propertyTaxSettlement = num("propertyTaxSettlement");
-    const monthlyRent = num("monthlyRent");
+    const purchasePrice = sen("purchasePrice");
+    const realEstateAcquisitionTax = sen("realEstateAcquisitionTax");
+    const propertyTaxSettlement = num("propertyTaxSettlement"); // 円単位
+    const monthlyRent = sen("monthlyRent");
 
-    const loanPrincipal = useLoan ? num("loanPrincipal") : 0;
+    const loanPrincipal = useLoan ? sen("loanPrincipal") : 0;
     const loanRate = num("loanRate");
     const loanYears = num("loanYears");
     const loanMethod = String(fd.get("loanMethod") ?? "元利均等") as RepaymentMethod;
@@ -168,28 +170,28 @@ export function PropertyForm() {
       </FormRow>
 
       <div>
-        <Label htmlFor="purchasePrice">物件価格（円）</Label>
+        <Label htmlFor="purchasePrice">物件価格（千円）</Label>
         <Input
           id="purchasePrice"
           name="purchasePrice"
           type="number"
           min={0}
-          step={10000}
-          placeholder="28000000"
+          step={100}
+          placeholder="28000"
           required
         />
       </div>
 
       <FormRow>
         <div>
-          <Label htmlFor="realEstateAcquisitionTax">不動産取得税（円）</Label>
+          <Label htmlFor="realEstateAcquisitionTax">不動産取得税（千円）</Label>
           <Input
             id="realEstateAcquisitionTax"
             name="realEstateAcquisitionTax"
             type="number"
             min={0}
-            step={10000}
-            placeholder="420000"
+            step={10}
+            placeholder="420"
             defaultValue={0}
           />
         </div>
@@ -200,7 +202,7 @@ export function PropertyForm() {
             name="propertyTaxSettlement"
             type="number"
             min={0}
-            step={1000}
+            step={1}
             placeholder="95000"
             defaultValue={0}
           />
@@ -212,14 +214,14 @@ export function PropertyForm() {
       </p>
 
       <div>
-        <Label htmlFor="monthlyRent">想定月額家賃（円）</Label>
+        <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
         <Input
           id="monthlyRent"
           name="monthlyRent"
           type="number"
           min={0}
-          step={1000}
-          placeholder="138000"
+          step={1}
+          placeholder="138"
           required
         />
       </div>
@@ -241,14 +243,14 @@ export function PropertyForm() {
           <div className="mt-4 space-y-4">
             <FormRow>
               <div>
-                <Label htmlFor="loanPrincipal">借入元本（円）</Label>
+                <Label htmlFor="loanPrincipal">借入元本（千円）</Label>
                 <Input
                   id="loanPrincipal"
                   name="loanPrincipal"
                   type="number"
                   min={0}
-                  step={100000}
-                  placeholder="25000000"
+                  step={100}
+                  placeholder="25000"
                   defaultValue={0}
                 />
               </div>

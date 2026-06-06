@@ -4,14 +4,9 @@ import { useMemo, useState } from "react";
 import type { Transaction, TransactionKind } from "@/features/transaction/types";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Select } from "@/shared/components/ui/Field";
-import { formatDate, formatThousandYen, formatYen } from "@/shared/lib/format";
+import { formatDate, formatYen } from "@/shared/lib/format";
 
 const PAGE_SIZE_OPTIONS = [50, 100, 200];
-
-/** 固定資産税のみ円単位、それ以外は千円単位で表示する */
-function amountLabel(t: Pick<Transaction, "category" | "amount">): string {
-  return t.category === "固定資産税" ? formatYen(t.amount) : formatThousandYen(t.amount);
-}
 
 export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
   const [year, setYear] = useState<string>("all");
@@ -114,9 +109,9 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                     <td className="px-4 py-2.5 text-slate-500">
                       {t.breakdown ? (
                         <span className="text-xs">
-                          元本 {formatThousandYen(t.breakdown.principal)}
+                          元本 {formatYen(t.breakdown.principal)}
                           <span className="text-slate-300"> ・ </span>
-                          利息 {formatThousandYen(t.breakdown.interest)}
+                          利息 {formatYen(t.breakdown.interest)}
                         </span>
                       ) : (
                         <span className="text-slate-400">{t.memo ?? "—"}</span>
@@ -128,7 +123,7 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                       }`}
                     >
                       {income ? "+" : "−"}
-                      {amountLabel(t)}
+                      {formatYen(t.amount)}
                     </td>
                   </tr>
                 );
