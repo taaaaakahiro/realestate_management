@@ -34,7 +34,7 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
           {formatMan(summary.totalIncome)}
         </CardValue>
         <p className="mt-2 text-xs text-slate-500">
-          支出累計 {formatMan(summary.totalExpense)}
+          支出累計 <span className="font-semibold text-rose-600">{formatMan(summary.totalExpense)}</span>
         </p>
       </Card>
 

@@ -445,10 +445,10 @@ export function PropertyForm({
         </div>
       )}
 
-      {/* 取得シミュレーション（評価額・引き渡し日から自動計算） */}
+      {/* 取得原価（評価額・引き渡し日から自動計算） */}
       <fieldset className="space-y-4 rounded-xl border border-slate-200 p-4">
         <legend className="px-1 text-sm font-semibold text-slate-700">
-          取得シミュレーション
+          取得原価（諸費用の自動計算）
         </legend>
 
         <FormRow>

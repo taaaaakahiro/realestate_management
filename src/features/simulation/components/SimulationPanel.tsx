@@ -54,7 +54,7 @@ export function SimulationPanel({ property: p }: { property: Property }) {
       </div>
 
       <Card>
-        <h2 className="mb-2 text-lg font-bold text-slate-900">収支シミュレーション内訳</h2>
+        <h2 className="mb-2 text-lg font-bold text-slate-900">取得原価の内訳</h2>
         <div className="divide-y divide-slate-100">
           <Row label="物件価格" value={formatYen(p.purchasePrice)} />
           <Row

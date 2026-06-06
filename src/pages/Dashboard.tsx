@@ -1,8 +1,14 @@
-import { analyzeProperty, summarizePortfolio } from "@/features/analytics/service";
+import {
+  analyzeProperty,
+  realizedPnL,
+  summarizePortfolio,
+} from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
 import { isInPortfolio } from "@/features/property/types";
 import { propertyTransactions } from "@/features/loan/service";
+import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
+import { formatMan } from "@/shared/lib/format";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { useStore } from "@/data/store";
 
@@ -17,6 +23,14 @@ export function Dashboard() {
   const summary = summarizePortfolio(analytics);
   const ranked = [...analytics].sort((a, b) => b.recoveryRate - a.recoveryRate);
 
+  // 売却済みの実現損益（ポートフォリオに反映）
+  const soldProps = properties.filter((p) => p.status === "sold");
+  const realizedTotal = soldProps.reduce((sum, p) => {
+    const until = p.saleDate ?? TODAY_ISO;
+    const a = analyzeProperty(p, propertyTransactions(p.id, transactions, loans, until));
+    return sum + realizedPnL(a);
+  }, 0);
+
   return (
     <div className="space-y-8">
       <div>
@@ -27,6 +41,23 @@ export function Dashboard() {
       </div>
 
       <PortfolioSummaryCards summary={summary} />
+
+      {soldProps.length > 0 && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardLabel>実現損益（売却済み {soldProps.length} 件）</CardLabel>
+            <CardValue
+              className={realizedTotal >= 0 ? "text-emerald-600" : "text-rose-600"}
+            >
+              {realizedTotal >= 0 ? "+" : "−"}
+              {formatMan(Math.abs(realizedTotal))}
+            </CardValue>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            売却で確定した通算損益（保有期間の収支 ＋ 売却純額）
+          </p>
+        </Card>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-bold text-slate-900">物件別の回収状況</h2>

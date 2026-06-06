@@ -25,6 +25,19 @@ export interface PropertyAnalytics {
   monthlyCashFlow: number;
 }
 
+/** 売却純額 = 売却価格 − 売却経費 */
+export function saleNet(p: Property): number {
+  return (p.salePrice ?? 0) - (p.saleExpenses ?? 0);
+}
+
+/**
+ * 実現損益 = 累計損益（収入 − 投資総額）+ 売却純額。
+ * 売却済み物件が確定させた通算の損益。
+ */
+export function realizedPnL(a: PropertyAnalytics): number {
+  return a.netProfit + saleNet(a.property);
+}
+
 const sumBy = (txns: Transaction[], kind: Transaction["kind"]) =>
   txns.filter((t) => t.kind === kind).reduce((acc, t) => acc + t.amount, 0);
 
