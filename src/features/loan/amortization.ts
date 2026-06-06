@@ -82,35 +82,43 @@ export function buildSchedule(loan: Loan): ScheduleRow[] {
   return rows;
 }
 
-/** 指定日までの返済を、元本・利息それぞれの支出取引（仮想）に展開する */
+/**
+ * 指定日までの返済を、月ごとに1件の「ローン返済」支出取引（仮想）へ展開する。
+ * 元本・利息は個別取引にせず、breakdown として内訳を保持する。
+ */
 export function loanTransactions(loan: Loan, untilISO: string): Transaction[] {
   const until = monthStart(untilISO).getTime();
   const txns: Transaction[] = [];
   for (const row of buildSchedule(loan)) {
     if (monthStart(`${row.month}-01`).getTime() > until) break;
-    const date = `${row.month}-27`;
-    if (row.principal > 0) {
-      txns.push({
-        id: `loan-${loan.propertyId}-${row.month}-p`,
-        propertyId: loan.propertyId,
-        date,
-        kind: "expense",
-        category: "ローン元本",
-        amount: row.principal,
-      });
-    }
-    if (row.interest > 0) {
-      txns.push({
-        id: `loan-${loan.propertyId}-${row.month}-i`,
-        propertyId: loan.propertyId,
-        date,
-        kind: "expense",
-        category: "ローン利息",
-        amount: row.interest,
-      });
-    }
+    if (row.payment <= 0) continue;
+    txns.push({
+      id: `loan-${loan.propertyId}-${row.month}`,
+      propertyId: loan.propertyId,
+      date: `${row.month}-27`,
+      kind: "expense",
+      category: "ローン返済",
+      amount: row.payment,
+      breakdown: { principal: row.principal, interest: row.interest },
+    });
   }
   return txns;
+}
+
+/**
+ * 指定日に入力された返済額を、元本・利息に分解する。
+ * 利息はその月の残高×金利（返済スケジュール基準）から求め、元本 = 返済額 − 利息。
+ */
+export function splitPayment(
+  loan: Loan,
+  dateISO: string,
+  payment: number,
+): { principal: number; interest: number } {
+  const target = ym(monthStart(dateISO));
+  const row = buildSchedule(loan).find((r) => r.month === target);
+  const pay = Math.round(payment);
+  const interest = Math.min(row ? row.interest : 0, pay);
+  return { principal: pay - interest, interest };
 }
 
 export interface LoanSummary {

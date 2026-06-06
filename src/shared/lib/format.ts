@@ -19,6 +19,11 @@ export function formatMan(value: number): string {
   return `${Math.round(value / 10000).toLocaleString("ja-JP")}万円`;
 }
 
+/** 千円表記 (例: 146千円) — 明細など端数不要の金額用 */
+export function formatThousandYen(value: number): string {
+  return `${Math.round(value / 1000).toLocaleString("ja-JP")}千円`;
+}
+
 /** パーセント表記 (例: 42.5%) */
 export function formatPercent(value: number, fractionDigits = 1): string {
   return `${value.toFixed(fractionDigits)}%`;

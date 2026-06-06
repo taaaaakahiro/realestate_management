@@ -5,6 +5,7 @@ export const mockProperties: Property[] = [
   {
     id: "prop-001",
     name: "グランドメゾン新宿",
+    status: "owned",
     postalCode: "1600023",
     address: "東京都新宿区西新宿7-1-1",
     type: "区分マンション",
@@ -18,6 +19,7 @@ export const mockProperties: Property[] = [
   {
     id: "prop-002",
     name: "サンライズ横浜アパート",
+    status: "owned",
     postalCode: "2220037",
     address: "神奈川県横浜市港北区大倉山3-2-5",
     type: "一棟アパート",
@@ -31,6 +33,7 @@ export const mockProperties: Property[] = [
   {
     id: "prop-003",
     name: "緑が丘戸建て",
+    status: "owned",
     postalCode: "2770084",
     address: "千葉県柏市緑が丘12-4",
     type: "戸建て",
@@ -40,5 +43,19 @@ export const mockProperties: Property[] = [
     purchaseDate: "2024-03-20",
     monthlyRent: 105_000,
     emoji: "🏡",
+  },
+  {
+    id: "prop-004",
+    name: "（検討中）川崎駅前マンション",
+    status: "prospect",
+    postalCode: "2100007",
+    address: "神奈川県川崎市川崎区駅前本町",
+    type: "区分マンション",
+    purchasePrice: 33_000_000,
+    realEstateAcquisitionTax: 500_000,
+    propertyTaxSettlement: 110_000,
+    purchaseDate: "2026-09-01",
+    monthlyRent: 152_000,
+    emoji: "🏙️",
   },
 ];

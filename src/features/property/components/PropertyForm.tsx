@@ -5,12 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   iconForType,
+  PROPERTY_STATUSES,
   PROPERTY_TYPES,
+  STATUS_LABEL,
+  type Property,
+  type PropertyStatus,
   type PropertyType,
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
-import { REPAYMENT_METHODS, type RepaymentMethod } from "@/features/loan/types";
-import { addLoan, addProperty } from "@/data/store";
+import { REPAYMENT_METHODS, type Loan, type RepaymentMethod } from "@/features/loan/types";
+import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
 import {
   Button,
   FormRow,
@@ -19,15 +23,26 @@ import {
   Select,
 } from "@/shared/components/ui/Field";
 
-export function PropertyForm() {
-  const router = useRouter();
+/** 円 → 千円（入力欄の初期値用） */
+const toSen = (yen: number) => Math.round(yen / 1000);
 
-  const [postalCode, setPostalCode] = useState("");
-  const [address, setAddress] = useState("");
+export function PropertyForm({
+  initialProperty,
+  initialLoan,
+}: {
+  initialProperty?: Property;
+  initialLoan?: Loan;
+}) {
+  const router = useRouter();
+  const isEdit = !!initialProperty;
+
+  const [postalCode, setPostalCode] = useState(initialProperty?.postalCode ?? "");
+  const [address, setAddress] = useState(initialProperty?.address ?? "");
   const [zipStatus, setZipStatus] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [useLoan, setUseLoan] = useState(!!initialLoan);
 
   async function lookupZip(code: string) {
     const normalized = normalizeZip(code);
@@ -51,32 +66,41 @@ export function PropertyForm() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const num = (k: string) => Number(fd.get(k));
+    const sen = (k: string) => Math.round((Number(fd.get(k)) || 0) * 1000);
 
     const name = String(fd.get("name") ?? "").trim();
+    const status = String(fd.get("status") ?? "owned") as PropertyStatus;
     const type = String(fd.get("type") ?? "") as PropertyType;
     const purchaseDate = String(fd.get("purchaseDate") ?? "");
-    const purchasePrice = num("purchasePrice");
-    const realEstateAcquisitionTax = num("realEstateAcquisitionTax");
-    const propertyTaxSettlement = num("propertyTaxSettlement");
-    const monthlyRent = num("monthlyRent");
+    const purchasePrice = sen("purchasePrice");
+    const realEstateAcquisitionTax = sen("realEstateAcquisitionTax");
+    const propertyTaxSettlement = num("propertyTaxSettlement"); // 円単位
+    const monthlyRent = sen("monthlyRent");
 
-    const loanPrincipal = num("loanPrincipal");
+    const loanPrincipal = useLoan ? sen("loanPrincipal") : 0;
     const loanRate = num("loanRate");
     const loanYears = num("loanYears");
     const loanMethod = String(fd.get("loanMethod") ?? "元利均等") as RepaymentMethod;
+    const loanStartDate = String(fd.get("loanStartDate") ?? "") || purchaseDate;
 
     if (!name) return setError("物件名を入力してください。");
     if (!PROPERTY_TYPES.includes(type)) return setError("物件種別を選択してください。");
     if (!purchaseDate) return setError("取得日を入力してください。");
     if (!(purchasePrice > 0)) return setError("物件価格は正の数で入力してください。");
     if (!(monthlyRent > 0)) return setError("想定月額家賃は正の数で入力してください。");
-    if (loanPrincipal > 0 && !(loanYears > 0))
-      return setError("融資を入力する場合は返済期間（年）を入力してください。");
+    if (useLoan && !(loanPrincipal > 0))
+      return setError("融資を利用する場合は借入元本を入力してください。");
+    if (useLoan && !(loanYears > 0))
+      return setError("融資を利用する場合は返済期間（年）を入力してください。");
+    if (useLoan && !loanStartDate)
+      return setError("融資を利用する場合は返済開始日を入力してください。");
 
     setError(null);
     setPending(true);
-    const created = addProperty({
+
+    const fields = {
       name,
+      status,
       postalCode: normalizeZip(postalCode),
       address: address.trim(),
       type,
@@ -86,26 +110,57 @@ export function PropertyForm() {
       purchaseDate,
       monthlyRent,
       emoji: iconForType(type),
-    });
+    };
 
-    if (loanPrincipal > 0) {
+    const propertyId = isEdit ? initialProperty!.id : addProperty(fields).id;
+    if (isEdit) updateProperty(propertyId, fields);
+
+    if (useLoan && loanPrincipal > 0) {
+      // 金利変更履歴（2件目以降）は保持し、当初金利・開始日のみ更新する
+      const tail = initialLoan ? initialLoan.ratePeriods.slice(1) : [];
       addLoan({
-        propertyId: created.id,
+        propertyId,
         principal: loanPrincipal,
-        startDate: purchaseDate,
+        startDate: loanStartDate,
         termMonths: Math.round(loanYears * 12),
         method: loanMethod,
-        ratePeriods: [{ from: purchaseDate, annualRatePercent: Math.max(0, loanRate || 0) }],
+        ratePeriods: [
+          { from: loanStartDate, annualRatePercent: Math.max(0, loanRate || 0) },
+          ...tail,
+        ],
       });
+    } else if (isEdit) {
+      removeLoan(propertyId);
     }
-    router.push("/properties");
+
+    router.push(isEdit ? `/properties/detail?id=${propertyId}` : "/properties");
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
         <Label htmlFor="name">物件名</Label>
-        <Input id="name" name="name" placeholder="例: グランドメゾン新宿" required />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={initialProperty?.name}
+          placeholder="例: グランドメゾン新宿"
+          required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="status">状態</Label>
+        <Select id="status" name="status" defaultValue={initialProperty?.status ?? "owned"}>
+          {PROPERTY_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-xs text-slate-500">
+          「取得前」はポートフォリオ（回収率集計）に含まれません。取得後に「保有中」へ切り替えできます。
+        </p>
       </div>
 
       <div>
@@ -150,7 +205,11 @@ export function PropertyForm() {
       <FormRow>
         <div>
           <Label htmlFor="type">物件種別</Label>
-          <Select id="type" name="type" defaultValue={PROPERTY_TYPES[0]}>
+          <Select
+            id="type"
+            name="type"
+            defaultValue={initialProperty?.type ?? PROPERTY_TYPES[0]}
+          >
             {PROPERTY_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -160,34 +219,41 @@ export function PropertyForm() {
         </div>
         <div>
           <Label htmlFor="purchaseDate">取得日</Label>
-          <Input id="purchaseDate" name="purchaseDate" type="date" required />
+          <Input
+            id="purchaseDate"
+            name="purchaseDate"
+            type="date"
+            defaultValue={initialProperty?.purchaseDate}
+            required
+          />
         </div>
       </FormRow>
 
       <div>
-        <Label htmlFor="purchasePrice">物件価格（円）</Label>
+        <Label htmlFor="purchasePrice">物件価格（千円）</Label>
         <Input
           id="purchasePrice"
           name="purchasePrice"
           type="number"
           min={0}
-          step={10000}
-          placeholder="28000000"
+          step={100}
+          placeholder="28000"
+          defaultValue={initialProperty ? toSen(initialProperty.purchasePrice) : undefined}
           required
         />
       </div>
 
       <FormRow>
         <div>
-          <Label htmlFor="realEstateAcquisitionTax">不動産取得税（円）</Label>
+          <Label htmlFor="realEstateAcquisitionTax">不動産取得税（千円）</Label>
           <Input
             id="realEstateAcquisitionTax"
             name="realEstateAcquisitionTax"
             type="number"
             min={0}
-            step={10000}
-            placeholder="420000"
-            defaultValue={0}
+            step={10}
+            placeholder="420"
+            defaultValue={initialProperty ? toSen(initialProperty.realEstateAcquisitionTax) : 0}
           />
         </div>
         <div>
@@ -197,9 +263,9 @@ export function PropertyForm() {
             name="propertyTaxSettlement"
             type="number"
             min={0}
-            step={1000}
+            step={1}
             placeholder="95000"
-            defaultValue={0}
+            defaultValue={initialProperty?.propertyTaxSettlement ?? 0}
           />
         </div>
       </FormRow>
@@ -209,66 +275,91 @@ export function PropertyForm() {
       </p>
 
       <div>
-        <Label htmlFor="monthlyRent">想定月額家賃（円）</Label>
+        <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
         <Input
           id="monthlyRent"
           name="monthlyRent"
           type="number"
           min={0}
-          step={1000}
-          placeholder="138000"
+          step={1}
+          placeholder="138"
+          defaultValue={initialProperty ? toSen(initialProperty.monthlyRent) : undefined}
           required
         />
       </div>
 
       {/* 融資（任意） */}
       <fieldset className="rounded-xl border border-slate-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-slate-700">
-          融資（任意・現金購入なら空欄）
-        </legend>
-        <FormRow>
-          <div>
-            <Label htmlFor="loanPrincipal">借入元本（円）</Label>
-            <Input
-              id="loanPrincipal"
-              name="loanPrincipal"
-              type="number"
-              min={0}
-              step={100000}
-              placeholder="25000000"
-              defaultValue={0}
-            />
-          </div>
-          <div>
-            <Label htmlFor="loanRate">当初金利（年率 %）</Label>
-            <Input
-              id="loanRate"
-              name="loanRate"
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder="1.80"
-              defaultValue={0}
-            />
-          </div>
-        </FormRow>
-        <div className="mt-4">
-          <FormRow>
-            <div>
-              <Label htmlFor="loanYears">返済期間（年）</Label>
-              <Input
-                id="loanYears"
-                name="loanYears"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="35"
-                defaultValue={0}
-              />
-            </div>
+        <legend className="px-1 text-sm font-semibold text-slate-700">融資</legend>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={useLoan}
+            onChange={(e) => setUseLoan(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+          />
+          融資を利用する（ローンを組む）
+        </label>
+
+        {useLoan ? (
+          <div className="mt-4 space-y-4">
+            <FormRow>
+              <div>
+                <Label htmlFor="loanPrincipal">借入元本（千円）</Label>
+                <Input
+                  id="loanPrincipal"
+                  name="loanPrincipal"
+                  type="number"
+                  min={0}
+                  step={100}
+                  placeholder="25000"
+                  defaultValue={initialLoan ? toSen(initialLoan.principal) : 0}
+                />
+              </div>
+              <div>
+                <Label htmlFor="loanStartDate">返済開始日</Label>
+                <Input
+                  id="loanStartDate"
+                  name="loanStartDate"
+                  type="date"
+                  defaultValue={initialLoan?.startDate}
+                  required
+                />
+              </div>
+            </FormRow>
+            <FormRow>
+              <div>
+                <Label htmlFor="loanRate">当初金利（年率 %）</Label>
+                <Input
+                  id="loanRate"
+                  name="loanRate"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="1.80"
+                  defaultValue={initialLoan?.ratePeriods[0]?.annualRatePercent ?? 0}
+                />
+              </div>
+              <div>
+                <Label htmlFor="loanYears">返済期間（年）</Label>
+                <Input
+                  id="loanYears"
+                  name="loanYears"
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="35"
+                  defaultValue={initialLoan ? initialLoan.termMonths / 12 : 0}
+                />
+              </div>
+            </FormRow>
             <div>
               <Label htmlFor="loanMethod">返済方式</Label>
-              <Select id="loanMethod" name="loanMethod" defaultValue={REPAYMENT_METHODS[0]}>
+              <Select
+                id="loanMethod"
+                name="loanMethod"
+                defaultValue={initialLoan?.method ?? REPAYMENT_METHODS[0]}
+              >
                 {REPAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {m}
@@ -276,11 +367,13 @@ export function PropertyForm() {
                 ))}
               </Select>
             </div>
-          </FormRow>
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          毎月の返済は元本・利息に自動で分解されます。金利の途中変更は物件詳細から登録できます。
-        </p>
+            <p className="text-xs text-slate-500">
+              毎月の返済は元本・利息に自動で分解されます。金利の途中変更は物件詳細から登録できます。
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">現金購入の場合はチェック不要です。</p>
+        )}
       </fieldset>
 
       {error && (
@@ -289,9 +382,9 @@ export function PropertyForm() {
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "登録中..." : "物件を登録"}
+          {pending ? "保存中..." : isEdit ? "更新する" : "物件を登録"}
         </Button>
-        <Link href="/properties">
+        <Link href={isEdit ? `/properties/detail?id=${initialProperty!.id}` : "/properties"}>
           <Button type="button" variant="ghost">
             キャンセル
           </Button>

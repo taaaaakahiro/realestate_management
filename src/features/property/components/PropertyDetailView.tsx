@@ -1,24 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   analyzeProperty,
   buildCumulativeSeries,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
-import { formatPostalCode } from "@/features/property/types";
+import { formatPostalCode, STATUS_LABEL } from "@/features/property/types";
 import { LoanPanel } from "@/features/loan/components/LoanPanel";
 import { propertyTransactions } from "@/features/loan/service";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
+import { Button } from "@/shared/components/ui/Field";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
 import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
 import { TODAY_ISO } from "@/shared/lib/clock";
-import { useStore } from "@/data/store";
+import { deleteProperty, updateProperty, useStore } from "@/data/store";
 
 export function PropertyDetailView() {
+  const router = useRouter();
   const id = useSearchParams().get("id");
   const { properties, transactions, loans } = useStore();
   const property = properties.find((p) => p.id === id);
@@ -34,6 +36,14 @@ export function PropertyDetailView() {
     );
   }
 
+  function handleDelete() {
+    if (confirm(`「${property!.name}」を削除します。\n関連する取引・融資も削除されます。よろしいですか？`)) {
+      deleteProperty(property!.id);
+      router.push("/properties");
+    }
+  }
+
+  const statusTone = { prospect: "neutral", owned: "success", sold: "expense" } as const;
   const loan = loans.find((l) => l.propertyId === property.id);
   const propertyTxns = propertyTransactions(property.id, transactions, loans, TODAY_ISO);
   const a = analyzeProperty(property, propertyTxns);
@@ -46,7 +56,7 @@ export function PropertyDetailView() {
         <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
           ← 物件一覧へ戻る
         </Link>
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="text-4xl">{property.emoji}</span>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{property.name}</h1>
@@ -55,8 +65,56 @@ export function PropertyDetailView() {
               {property.address}
             </p>
           </div>
+          <Badge tone={statusTone[property.status]}>{STATUS_LABEL[property.status]}</Badge>
           <Badge tone="neutral">{property.type}</Badge>
+          <div className="ml-auto flex flex-wrap gap-2">
+            {property.status === "prospect" && (
+              <Button
+                type="button"
+                onClick={() => updateProperty(property.id, { status: "owned" })}
+              >
+                取得済みにする（ポートフォリオに追加）
+              </Button>
+            )}
+            {property.status === "owned" && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => updateProperty(property.id, { status: "sold" })}
+              >
+                売却済みにする
+              </Button>
+            )}
+            {property.status === "sold" && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => updateProperty(property.id, { status: "owned" })}
+              >
+                保有中に戻す
+              </Button>
+            )}
+            <Link href={`/properties/edit?id=${property.id}`}>
+              <Button type="button" variant="ghost">
+                編集
+              </Button>
+            </Link>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+            >
+              削除
+            </button>
+          </div>
         </div>
+        {property.status !== "owned" && (
+          <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
+            {property.status === "prospect"
+              ? "この物件は「取得前」のため、ポートフォリオ（回収率集計）には含まれません。"
+              : "この物件は「売却済み」のため、ポートフォリオ（回収率集計）には含まれません。"}
+          </p>
+        )}
       </div>
 
       {/* 回収率ハイライト */}
@@ -132,7 +190,7 @@ export function PropertyDetailView() {
             ＋ この物件に収支を登録
           </Link>
         </div>
-        <TransactionTable transactions={propertyTxns} limit={30} />
+        <TransactionTable transactions={propertyTxns} />
       </section>
     </div>
   );
