@@ -1,10 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { createPropertyAction, type ActionState } from "@/features/property/actions";
-import { PROPERTY_TYPES } from "@/features/property/types";
-import { normalizeZip } from "@/shared/lib/zipcode";
+import { useRouter } from "next/navigation";
+import {
+  iconForType,
+  PROPERTY_TYPES,
+  type PropertyType,
+} from "@/features/property/types";
+import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
+import { addProperty } from "@/data/store";
 import {
   Button,
   FormRow,
@@ -14,15 +19,14 @@ import {
 } from "@/shared/components/ui/Field";
 
 export function PropertyForm() {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    createPropertyAction,
-    {},
-  );
+  const router = useRouter();
 
   const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
   const [zipStatus, setZipStatus] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   async function lookupZip(code: string) {
     const normalized = normalizeZip(code);
@@ -32,24 +36,54 @@ export function PropertyForm() {
     }
     setZipLoading(true);
     setZipStatus(null);
-    try {
-      const res = await fetch(`/api/zipcode?code=${normalized}`);
-      const data = (await res.json()) as { address?: string; error?: string };
-      if (data.address) {
-        setAddress(data.address);
-        setZipStatus("住所を入力しました。番地・建物名を追記してください。");
-      } else {
-        setZipStatus(data.error ?? "住所が見つかりませんでした。");
-      }
-    } catch {
-      setZipStatus("住所の取得に失敗しました。");
-    } finally {
-      setZipLoading(false);
+    const result = await lookupAddressByZip(normalized);
+    if ("address" in result) {
+      setAddress(result.address);
+      setZipStatus("住所を入力しました。番地・建物名を追記してください。");
+    } else {
+      setZipStatus(result.error);
     }
+    setZipLoading(false);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const num = (k: string) => Number(fd.get(k));
+
+    const name = String(fd.get("name") ?? "").trim();
+    const type = String(fd.get("type") ?? "") as PropertyType;
+    const purchaseDate = String(fd.get("purchaseDate") ?? "");
+    const purchasePrice = num("purchasePrice");
+    const realEstateAcquisitionTax = num("realEstateAcquisitionTax");
+    const propertyTaxSettlement = num("propertyTaxSettlement");
+    const monthlyRent = num("monthlyRent");
+
+    if (!name) return setError("物件名を入力してください。");
+    if (!PROPERTY_TYPES.includes(type)) return setError("物件種別を選択してください。");
+    if (!purchaseDate) return setError("取得日を入力してください。");
+    if (!(purchasePrice > 0)) return setError("物件価格は正の数で入力してください。");
+    if (!(monthlyRent > 0)) return setError("想定月額家賃は正の数で入力してください。");
+
+    setError(null);
+    setPending(true);
+    addProperty({
+      name,
+      postalCode: normalizeZip(postalCode),
+      address: address.trim(),
+      type,
+      purchasePrice,
+      realEstateAcquisitionTax: Math.max(0, realEstateAcquisitionTax || 0),
+      propertyTaxSettlement: Math.max(0, propertyTaxSettlement || 0),
+      purchaseDate,
+      monthlyRent,
+      emoji: iconForType(type),
+    });
+    router.push("/properties");
   }
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div>
         <Label htmlFor="name">物件名</Label>
         <Input id="name" name="name" placeholder="例: グランドメゾン新宿" required />
@@ -168,10 +202,8 @@ export function PropertyForm() {
         />
       </div>
 
-      {state.error && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {state.error}
-        </p>
+      {error && (
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
       )}
 
       <div className="flex items-center gap-3">

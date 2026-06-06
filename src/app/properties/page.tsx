@@ -1,17 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { analyzeProperty } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
-import { getPropertyRepository } from "@/features/property/repository";
-import { getTransactionRepository } from "@/features/transaction/repository";
 import { Button } from "@/shared/components/ui/Field";
+import { useStore } from "@/data/store";
 
-export default async function PropertiesPage() {
-  const properties = await getPropertyRepository().findAll();
-  const txnRepo = getTransactionRepository();
+export default function PropertiesPage() {
+  const { properties, transactions } = useStore();
 
-  const analytics = await Promise.all(
-    properties.map(async (p) =>
-      analyzeProperty(p, await txnRepo.findByPropertyId(p.id)),
+  const analytics = properties.map((p) =>
+    analyzeProperty(
+      p,
+      transactions.filter((t) => t.propertyId === p.id),
     ),
   );
 

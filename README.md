@@ -67,4 +67,27 @@ src/
 
 `data/mock/` で物件3件と、取得月から現在（2026-06）までの月次取引を決定論的に生成しています。
 空室・修繕費・更新料などのイベントも擬似的に含まれます。
-# realestate_management
+
+## GitHub Pages へのデプロイ
+
+静的サイトとして書き出し、GitHub Pages で公開できます。
+
+- `next.config.ts` の `output: "export"` で静的HTMLを `out/` に生成
+- サーバーを持てないため、**登録データはブラウザの localStorage に保存**（`data/store.ts`）。
+  モックデータをシードとし、物件・収支の登録は端末ごとにブラウザ内へ永続化されます
+- 郵便番号→住所の検索は zipcloud をブラウザから直接呼び出します
+- `.github/workflows/deploy.yml` が `main` への push で自動ビルド＆デプロイ
+
+### 公開手順
+
+1. リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に設定
+2. このブランチを `main` にマージ（または Actions タブから `Deploy to GitHub Pages` を手動実行）
+3. `https://<ユーザー名>.github.io/realestate_management/` で公開
+
+ローカルで本番ビルドを確認する場合:
+
+```bash
+NODE_ENV=production npm run build   # out/ に生成
+npx serve out                       # 簡易配信（basePath に注意）
+```
+
