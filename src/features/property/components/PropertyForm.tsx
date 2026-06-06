@@ -14,7 +14,7 @@ import {
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
 import { REPAYMENT_METHODS, type Loan, type RepaymentMethod } from "@/features/loan/types";
-import { DEFAULT_BROKERAGE_FEE, simulate } from "@/features/simulation/calc";
+import { calcStampDuty, DEFAULT_BROKERAGE_FEE, simulate } from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
 import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
@@ -62,7 +62,6 @@ export function PropertyForm({
   const [brokerageFee, setBrokerageFee] = useState(
     String(initialProperty?.brokerageFee ?? DEFAULT_BROKERAGE_FEE),
   );
-  const [stampDuty, setStampDuty] = useState(String(initialProperty?.stampDuty ?? 0));
   const [monthlyRent, setMonthlyRent] = useState(
     initialProperty ? String(toSen(initialProperty.monthlyRent)) : "",
   );
@@ -79,7 +78,6 @@ export function PropertyForm({
     handoverDate: purchaseDate,
     monthlyRent: rentYen,
     brokerageFee: yen(brokerageFee),
-    stampDuty: yen(stampDuty),
   });
   const hasAssessed = landAssessedYen + buildingAssessedYen > 0;
   const showSim = priceYen > 0 && hasAssessed;
@@ -140,7 +138,7 @@ export function PropertyForm({
       landAssessedValue: landAssessedYen,
       buildingAssessedValue: buildingAssessedYen,
       brokerageFee: yen(brokerageFee),
-      stampDuty: yen(stampDuty),
+      stampDuty: calcStampDuty(priceYen),
       realEstateAcquisitionTax: sim.acquisitionTax.total,
       propertyTaxSettlement: sim.settlement.settlement,
       purchaseDate,
@@ -317,32 +315,21 @@ export function PropertyForm({
           </div>
         </FormRow>
 
-        <FormRow>
-          <div>
-            <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
-            <Input
-              id="brokerageFee"
-              type="number"
-              min={0}
-              step={1000}
-              placeholder="330000"
-              value={brokerageFee}
-              onChange={(e) => setBrokerageFee(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="stampDuty">印紙代（円）</Label>
-            <Input
-              id="stampDuty"
-              type="number"
-              min={0}
-              step={1000}
-              placeholder="20000"
-              value={stampDuty}
-              onChange={(e) => setStampDuty(e.target.value)}
-            />
-          </div>
-        </FormRow>
+        <div>
+          <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
+          <Input
+            id="brokerageFee"
+            type="number"
+            min={0}
+            step={1000}
+            placeholder="330000"
+            value={brokerageFee}
+            onChange={(e) => setBrokerageFee(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            印紙代は物件価格から印紙税法に基づき自動計算します。
+          </p>
+        </div>
 
         {showSim ? (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm">
@@ -370,6 +357,10 @@ export function PropertyForm({
               <span className="tabular-nums text-slate-800">
                 {formatYen(sim.settlement.settlement)}
               </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">印紙代（自動・印紙税法）</span>
+              <span className="tabular-nums text-slate-800">{formatYen(sim.stampDuty)}</span>
             </div>
             <hr className="border-slate-200" />
             <div className="flex justify-between">

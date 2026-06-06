@@ -13,6 +13,24 @@ export const DEFAULT_BROKERAGE_FEE = 330_000;
 const ACQ_TAX_RATE = 0.03; // 不動産取得税の軽減税率
 const FIXED_TAX_RATE = 0.014; // 固定資産税の標準税率
 
+/**
+ * 印紙税（不動産の譲渡に関する契約書・軽減税率）を、記載金額（物件価格）から求める。
+ * 印紙税法の軽減措置（令和9年3月31日まで）に基づく区分。
+ */
+export function calcStampDuty(price: number): number {
+  if (price <= 10_000) return 0;
+  if (price <= 500_000) return 200;
+  if (price <= 1_000_000) return 500;
+  if (price <= 5_000_000) return 1_000;
+  if (price <= 10_000_000) return 5_000;
+  if (price <= 50_000_000) return 10_000;
+  if (price <= 100_000_000) return 30_000;
+  if (price <= 500_000_000) return 60_000;
+  if (price <= 1_000_000_000) return 160_000;
+  if (price <= 5_000_000_000) return 320_000;
+  return 480_000;
+}
+
 /** 物件価格を土地・建物に按分。建物は千円単位に切り捨て、端数は土地に乗せる。 */
 export function allocatePrice(
   price: number,
@@ -81,7 +99,6 @@ export interface SimulationInput {
   handoverDate: string;
   monthlyRent: number;
   brokerageFee: number;
-  stampDuty: number;
 }
 
 export interface SimulationResult {
@@ -114,9 +131,9 @@ export function simulate(input: SimulationInput): SimulationResult {
     buildingAssessedValue,
     handoverDate,
   );
+  const stampDuty = calcStampDuty(purchasePrice); // 物件価格から自動算出
   const acquisitionCost = purchasePrice + acquisitionTax.total + settlement.settlement;
-  const initialCostTotal =
-    acquisitionCost + input.brokerageFee + input.stampDuty;
+  const initialCostTotal = acquisitionCost + input.brokerageFee + stampDuty;
   const annualRent = input.monthlyRent * 12;
   return {
     land,
@@ -124,7 +141,7 @@ export function simulate(input: SimulationInput): SimulationResult {
     acquisitionTax,
     settlement,
     brokerageFee: input.brokerageFee,
-    stampDuty: input.stampDuty,
+    stampDuty,
     acquisitionCost,
     initialCostTotal,
     grossYield: purchasePrice > 0 ? (annualRent / purchasePrice) * 100 : 0,

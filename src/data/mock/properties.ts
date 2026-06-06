@@ -2,14 +2,19 @@ import type { Property } from "@/features/property/types";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
+  calcStampDuty,
 } from "@/features/simulation/calc";
 
-type SeedProperty = Omit<Property, "realEstateAcquisitionTax" | "propertyTaxSettlement">;
+type SeedProperty = Omit<
+  Property,
+  "realEstateAcquisitionTax" | "propertyTaxSettlement" | "stampDuty"
+>;
 
-/** 評価額・引き渡し日から税額を自動算出して Property を組み立てる */
+/** 評価額・物件価格・引き渡し日から税額を自動算出して Property を組み立てる */
 function build(seed: SeedProperty): Property {
   return {
     ...seed,
+    stampDuty: calcStampDuty(seed.purchasePrice),
     realEstateAcquisitionTax: calcAcquisitionTax(
       seed.landAssessedValue,
       seed.buildingAssessedValue,
@@ -35,7 +40,6 @@ export const mockProperties: Property[] = [
     landAssessedValue: 8_000_000,
     buildingAssessedValue: 6_000_000,
     brokerageFee: 990_000,
-    stampDuty: 20_000,
     purchaseDate: "2023-01-15",
     monthlyRent: 138_000,
     emoji: "🏙️",
@@ -51,7 +55,6 @@ export const mockProperties: Property[] = [
     landAssessedValue: 22_000_000,
     buildingAssessedValue: 18_000_000,
     brokerageFee: 2_046_000,
-    stampDuty: 30_000,
     purchaseDate: "2022-06-01",
     monthlyRent: 520_000,
     emoji: "🏘️",
@@ -67,7 +70,6 @@ export const mockProperties: Property[] = [
     landAssessedValue: 7_000_000,
     buildingAssessedValue: 4_000_000,
     brokerageFee: 665_000,
-    stampDuty: 10_000,
     purchaseDate: "2024-03-20",
     monthlyRent: 105_000,
     emoji: "🏡",
@@ -83,7 +85,6 @@ export const mockProperties: Property[] = [
     landAssessedValue: 11_000_000,
     buildingAssessedValue: 8_000_000,
     brokerageFee: 330_000,
-    stampDuty: 20_000,
     purchaseDate: "2026-09-01",
     monthlyRent: 152_000,
     emoji: "🏙️",

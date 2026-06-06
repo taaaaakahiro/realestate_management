@@ -25,7 +25,6 @@ export function SimulationPanel({ property: p }: { property: Property }) {
     handoverDate: p.purchaseDate,
     monthlyRent: p.monthlyRent,
     brokerageFee: p.brokerageFee,
-    stampDuty: p.stampDuty,
   });
 
   return (

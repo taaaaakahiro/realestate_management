@@ -187,19 +187,21 @@ export function PropertyDetailView() {
         </>
       )}
 
-      {/* 取引明細 */}
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">取引明細</h2>
-          <Link
-            href={`/transactions/new?propertyId=${property.id}`}
-            className="text-sm font-semibold text-indigo-600 hover:underline"
-          >
-            ＋ この物件に収支を登録
-          </Link>
-        </div>
-        <TransactionTable transactions={propertyTxns} />
-      </section>
+      {/* 取引明細（取得前は不要） */}
+      {property.status !== "prospect" && (
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">取引明細</h2>
+            <Link
+              href={`/transactions/new?propertyId=${property.id}`}
+              className="text-sm font-semibold text-indigo-600 hover:underline"
+            >
+              ＋ この物件に収支を登録
+            </Link>
+          </div>
+          <TransactionTable transactions={propertyTxns} />
+        </section>
+      )}
     </div>
   );
 }
