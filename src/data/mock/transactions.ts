@@ -1,4 +1,5 @@
 import type { Transaction } from "@/features/transaction/types";
+import { TODAY } from "@/shared/lib/clock";
 import { mockProperties } from "./properties";
 
 /** 決定論的な擬似乱数 (mulberry32) — 再レンダリングでもチャートがブレないようにする */
@@ -13,9 +14,6 @@ function seeded(seed: number): () => number {
   };
 }
 
-/** 集計の基準日（モックの「現在」） */
-const TODAY = new Date("2026-06-06");
-
 function monthsBetween(from: Date, to: Date): number {
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
@@ -23,10 +21,12 @@ function monthsBetween(from: Date, to: Date): number {
 /**
  * 各物件について、取得月から現在までの月次取引を生成する。
  * - 家賃収入（空室月はスキップ）
- * - ローン返済・管理費（毎月）
+ * - 管理費（毎月）
  * - 固定資産税・火災保険（毎年）
  * - 広告料（空室明けの再客付け時）
  * - 修繕費（不定期）
+ *
+ * ローンの元本・利息は融資モデル(features/loan)から別途算出するため、ここでは生成しない。
  */
 function generateTransactions(): Transaction[] {
   const txns: Transaction[] = [];
@@ -36,7 +36,6 @@ function generateTransactions(): Transaction[] {
     const start = new Date(p.purchaseDate);
     const total = monthsBetween(start, TODAY);
 
-    const loanRepayment = Math.round((p.monthlyRent * 0.55) / 1000) * 1000;
     const mgmtFee = Math.round((p.monthlyRent * 0.08) / 1000) * 1000;
     let prevVacant = false;
 
@@ -72,16 +71,6 @@ function generateTransactions(): Transaction[] {
         });
       }
       prevVacant = vacant;
-
-      // ローン返済
-      txns.push({
-        id: `${id}-loan`,
-        propertyId: p.id,
-        date: ym,
-        kind: "expense",
-        category: "ローン返済",
-        amount: loanRepayment,
-      });
 
       // 管理費
       txns.push({

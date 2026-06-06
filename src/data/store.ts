@@ -3,8 +3,10 @@
 import { useSyncExternalStore } from "react";
 import { mockProperties } from "./mock/properties";
 import { mockTransactions } from "./mock/transactions";
+import { mockLoans } from "./mock/loans";
 import type { Property } from "@/features/property/types";
 import type { Transaction } from "@/features/transaction/types";
+import type { Loan, RatePeriod } from "@/features/loan/types";
 
 /**
  * クライアント側データストア（localStorage 永続化）。
@@ -20,14 +22,17 @@ import type { Transaction } from "@/features/transaction/types";
 export interface StoreData {
   properties: Property[];
   transactions: Transaction[];
+  loans: Loan[];
 }
 
-const KEY = "realestate-store-v1";
+// スキーマ変更時はバージョンを上げて古い localStorage を無効化する
+const KEY = "realestate-store-v2";
 
 /** ビルド時／初回レンダリングで使う不変のシード */
 const SEED: StoreData = {
   properties: mockProperties,
   transactions: mockTransactions,
+  loans: mockLoans,
 };
 
 let state: StoreData = SEED;
@@ -100,6 +105,34 @@ export function addTransaction(input: Omit<Transaction, "id">): Transaction {
   persist();
   emit();
   return transaction;
+}
+
+/** 物件に紐づく融資を登録（1物件1融資。既存があれば置き換え） */
+export function addLoan(loan: Loan): Loan {
+  const loans = [...state.loans.filter((l) => l.propertyId !== loan.propertyId), loan];
+  state = { ...state, loans };
+  persist();
+  emit();
+  return loan;
+}
+
+/** 既存融資に金利変更（適用開始日付き）を追加する */
+export function addRatePeriod(propertyId: string, period: RatePeriod): void {
+  state = {
+    ...state,
+    loans: state.loans.map((l) =>
+      l.propertyId === propertyId
+        ? {
+            ...l,
+            ratePeriods: [...l.ratePeriods, period].sort((a, b) =>
+              a.from.localeCompare(b.from),
+            ),
+          }
+        : l,
+    ),
+  };
+  persist();
+  emit();
 }
 
 /** 全データを購読する Hook。マウント後に localStorage へ差し替わる。 */
