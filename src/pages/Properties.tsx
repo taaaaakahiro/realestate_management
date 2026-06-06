@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Link from "next/link";
+import { Link } from "@/router";
 import { analyzeProperty } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
 import { STATUS_LABEL, type PropertyStatus } from "@/features/property/types";
@@ -14,7 +12,7 @@ import { useStore } from "@/data/store";
 const STATUS_ORDER: Record<PropertyStatus, number> = { prospect: 0, owned: 1, sold: 2 };
 type Filter = "all" | PropertyStatus;
 
-export default function PropertiesPage() {
+export function Properties() {
   const { properties, transactions, loans } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -58,7 +56,6 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {/* 状態フィルター */}
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
           <button
@@ -73,7 +70,12 @@ export default function PropertiesPage() {
             )}
           >
             {f.label}
-            <span className={cn("ml-1.5 text-xs", filter === f.key ? "text-indigo-100" : "text-slate-400")}>
+            <span
+              className={cn(
+                "ml-1.5 text-xs",
+                filter === f.key ? "text-indigo-100" : "text-slate-400",
+              )}
+            >
               {counts[f.key]}
             </span>
           </button>

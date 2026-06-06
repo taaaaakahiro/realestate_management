@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Link, useSearchParams } from "@/router";
 import { PropertyForm } from "@/features/property/components/PropertyForm";
 import { Card } from "@/shared/components/ui/Card";
 import { useStore } from "@/data/store";

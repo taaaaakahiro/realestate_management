@@ -45,6 +45,12 @@ export interface Property {
   propertyTaxSettlement: number;
   /** 取得日（取得前は引き渡し予定日）(ISO 8601) */
   purchaseDate: string;
+  /** 売却価格（売却済みのみ） */
+  salePrice?: number;
+  /** 売却にかかった経費（仲介手数料・印紙など。売却済みのみ） */
+  saleExpenses?: number;
+  /** 売却日 (ISO 8601、売却済みのみ) */
+  saleDate?: string;
   /** 想定月額家賃 */
   monthlyRent: number;
   /** カード表示用の絵文字アイコン（種別から自動採番） */

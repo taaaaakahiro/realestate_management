@@ -1,22 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { Link, useRouter, useSearchParams } from "@/router";
 import {
   analyzeProperty,
   buildCumulativeSeries,
+  saleNet,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
-import { formatPostalCode, STATUS_LABEL } from "@/features/property/types";
+import { acquisitionCost, formatPostalCode, STATUS_LABEL } from "@/features/property/types";
 import { LoanPanel } from "@/features/loan/components/LoanPanel";
 import { SimulationPanel } from "@/features/simulation/components/SimulationPanel";
 import { propertyTransactions } from "@/features/loan/service";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
-import { Button } from "@/shared/components/ui/Field";
+import { Button, FormRow, Input, Label } from "@/shared/components/ui/Field";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
-import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
+import { formatMan, formatPercent, formatYen, withThousands } from "@/shared/lib/format";
+import { isValidDate, sanitizeNumberInput, validateNumber } from "@/shared/lib/validation";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { deleteProperty, updateProperty, useStore } from "@/data/store";
 
@@ -25,6 +27,12 @@ export function PropertyDetailView() {
   const id = useSearchParams().get("id");
   const { properties, transactions, loans } = useStore();
   const property = properties.find((p) => p.id === id);
+
+  const [selling, setSelling] = useState(false);
+  const [salePrice, setSalePrice] = useState("");
+  const [saleExpenses, setSaleExpenses] = useState("");
+  const [saleDate, setSaleDate] = useState("");
+  const [saleError, setSaleError] = useState<string | null>(null);
 
   if (!property) {
     return (
@@ -44,12 +52,37 @@ export function PropertyDetailView() {
     }
   }
 
+  function confirmSale() {
+    const price = validateNumber(salePrice, { label: "売却価格" });
+    if (typeof price === "string") return setSaleError(price);
+    if (price === null) return setSaleError("売却価格を入力してください。");
+    const exp = validateNumber(saleExpenses, {
+      label: "売却経費",
+      min: 0,
+      allowZero: true,
+      optional: true,
+    });
+    if (typeof exp === "string") return setSaleError(exp);
+    if (!isValidDate(saleDate)) return setSaleError("売却日を正しく入力してください。");
+    setSaleError(null);
+    updateProperty(property!.id, {
+      status: "sold",
+      salePrice: price * 1000,
+      saleExpenses: typeof exp === "number" ? exp : 0,
+      saleDate,
+    });
+    setSelling(false);
+  }
+
   const statusTone = { prospect: "neutral", owned: "success", sold: "expense" } as const;
   const loan = loans.find((l) => l.propertyId === property.id);
-  const propertyTxns = propertyTransactions(property.id, transactions, loans, TODAY_ISO);
+  // 売却済みは売却日までの取引で集計する
+  const until = property.status === "sold" ? property.saleDate ?? TODAY_ISO : TODAY_ISO;
+  const propertyTxns = propertyTransactions(property.id, transactions, loans, until);
   const a = analyzeProperty(property, propertyTxns);
   const series = buildCumulativeSeries(property, propertyTxns);
   const profit = a.netProfit >= 0;
+  const realized = a.netProfit + saleNet(property);
 
   return (
     <div className="space-y-8">
@@ -78,11 +111,7 @@ export function PropertyDetailView() {
               </Button>
             )}
             {property.status === "owned" && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => updateProperty(property.id, { status: "sold" })}
-              >
+              <Button type="button" variant="ghost" onClick={() => setSelling((v) => !v)}>
                 売却済みにする
               </Button>
             )}
@@ -90,7 +119,14 @@ export function PropertyDetailView() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => updateProperty(property.id, { status: "owned" })}
+                onClick={() =>
+                  updateProperty(property.id, {
+                    status: "owned",
+                    salePrice: undefined,
+                    saleExpenses: undefined,
+                    saleDate: undefined,
+                  })
+                }
               >
                 保有中に戻す
               </Button>
@@ -109,14 +145,113 @@ export function PropertyDetailView() {
             </button>
           </div>
         </div>
-        {property.status !== "owned" && (
+        {property.status === "prospect" && (
           <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
-            {property.status === "prospect"
-              ? "この物件は「取得前」のため、ポートフォリオ（回収率集計）には含まれません。"
-              : "この物件は「売却済み」のため、ポートフォリオ（回収率集計）には含まれません。"}
+            この物件は「取得前」のため、ポートフォリオ（回収率集計）には含まれません。
           </p>
         )}
       </div>
+
+      {/* 売却入力フォーム */}
+      {selling && property.status === "owned" && (
+        <Card>
+          <h2 className="mb-3 text-lg font-bold text-slate-900">売却を登録</h2>
+          <FormRow>
+            <div>
+              <Label htmlFor="salePrice">売却価格（千円）</Label>
+              <Input
+                id="salePrice"
+                type="text"
+                inputMode="numeric"
+                placeholder="30000"
+                value={withThousands(salePrice)}
+                onChange={(e) => setSalePrice(sanitizeNumberInput(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="saleExpenses">売却経費（円）</Label>
+              <Input
+                id="saleExpenses"
+                type="text"
+                inputMode="numeric"
+                placeholder="1000000"
+                value={withThousands(saleExpenses)}
+                onChange={(e) => setSaleExpenses(sanitizeNumberInput(e.target.value))}
+              />
+            </div>
+          </FormRow>
+          <div className="mt-4 max-w-[220px]">
+            <Label htmlFor="saleDate">売却日</Label>
+            <Input
+              id="saleDate"
+              type="date"
+              value={saleDate}
+              onChange={(e) => setSaleDate(e.target.value)}
+            />
+          </div>
+          {saleError && (
+            <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {saleError}
+            </p>
+          )}
+          <div className="mt-4 flex gap-3">
+            <Button type="button" onClick={confirmSale}>
+              売却を確定（ポートフォリオから外す）
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setSelling(false)}>
+              キャンセル
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* 売却済みサマリー */}
+      {property.status === "sold" && (
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">売却損益</h2>
+            <span className="text-xs text-slate-500">
+              売却日 {property.saleDate ?? "—"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div>
+              <CardLabel>売却価格</CardLabel>
+              <CardValue className="text-xl text-emerald-600">
+                {formatYen(property.salePrice ?? 0)}
+              </CardValue>
+            </div>
+            <div>
+              <CardLabel>売却経費</CardLabel>
+              <CardValue className="text-xl text-rose-600">
+                {formatYen(property.saleExpenses ?? 0)}
+              </CardValue>
+            </div>
+            <div>
+              <CardLabel>譲渡損益（売却 − 経費 − 取得原価）</CardLabel>
+              <CardValue
+                className={`text-xl ${
+                  saleNet(property) - acquisitionCost(property) >= 0
+                    ? "text-emerald-600"
+                    : "text-rose-600"
+                }`}
+              >
+                {formatYen(saleNet(property) - acquisitionCost(property))}
+              </CardValue>
+            </div>
+            <div>
+              <CardLabel>実現損益（通算）</CardLabel>
+              <CardValue className={realized >= 0 ? "text-xl text-emerald-600" : "text-xl text-rose-600"}>
+                {realized >= 0 ? "+" : "−"}
+                {formatYen(Math.abs(realized))}
+              </CardValue>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            実現損益＝保有期間の収支（収入 − 投資総額）＋ 売却純額。ダッシュボードに反映されます。
+          </p>
+        </Card>
+      )}
 
       {property.status === "prospect" ? (
         /* 取得前: 収支シミュレーション */

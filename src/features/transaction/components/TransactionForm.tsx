@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link, useRouter } from "@/router";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -14,6 +13,7 @@ import { iconForType } from "@/features/property/types";
 import { splitPayment } from "@/features/loan/amortization";
 import { addTransaction, updateTransaction, useStore } from "@/data/store";
 import { formatPercent, formatYen } from "@/shared/lib/format";
+import { isValidDate, sanitizeNumberInput, validateNumber } from "@/shared/lib/validation";
 import {
   Button,
   FormRow,
@@ -75,11 +75,15 @@ export function TransactionForm({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const amt = Number(amount);
 
     if (!propertyId) return setError("物件を選択してください。");
-    if (!date) return setError("計上日を入力してください。");
-    if (!(amt > 0)) return setError("金額は正の数で入力してください。");
+    if (!isValidDate(date)) return setError("計上日を正しく入力してください。");
+    const amt = validateNumber(amount, {
+      label: isLoanRepayment ? "返済額" : "金額",
+      integer: true,
+    });
+    if (typeof amt === "string") return setError(amt);
+    if (amt === null) return setError("金額を入力してください。");
 
     let breakdown: { principal: number; interest: number } | undefined;
     if (isLoanRepayment) {
@@ -171,8 +175,9 @@ export function TransactionForm({
             type="number"
             min={0}
             step={1000}
+            inputMode="numeric"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(sanitizeNumberInput(e.target.value))}
             placeholder="138000"
             required
           />

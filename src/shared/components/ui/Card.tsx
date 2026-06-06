@@ -30,8 +30,16 @@ export function CardValue({
   children: React.ReactNode;
   className?: string;
 }) {
+  // 既定色は付けず本文色（≒slate-900）を継承。色を渡したとき（損益の赤など）に確実に反映される
+  const hasColor = className?.includes("text-");
   return (
-    <p className={cn("mt-1 text-2xl font-bold tabular-nums text-slate-900", className)}>
+    <p
+      className={cn(
+        "mt-1 text-2xl font-bold tabular-nums",
+        !hasColor && "text-slate-900",
+        className,
+      )}
+    >
       {children}
     </p>
   );

@@ -7,6 +7,7 @@ import type { Loan } from "@/features/loan/types";
 export const mockLoans: Loan[] = [
   {
     propertyId: "prop-001",
+    bankName: "横浜銀行",
     principal: 25_000_000,
     startDate: "2023-01-15",
     termMonths: 35 * 12,
@@ -15,6 +16,7 @@ export const mockLoans: Loan[] = [
   },
   {
     propertyId: "prop-002",
+    bankName: "住信SBIネット銀行",
     principal: 56_000_000,
     startDate: "2022-06-01",
     termMonths: 30 * 12,

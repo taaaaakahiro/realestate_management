@@ -1,12 +1,9 @@
-"use client";
-
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Link, useSearchParams } from "@/router";
 import { TransactionForm } from "@/features/transaction/components/TransactionForm";
 import { Card } from "@/shared/components/ui/Card";
 import { useStore } from "@/data/store";
 
-export function TransactionEdit() {
+export function EditTransaction() {
   const id = useSearchParams().get("id");
   const { transactions } = useStore();
   const transaction = transactions.find((t) => t.id === id);
@@ -16,9 +13,7 @@ export function TransactionEdit() {
       <div>
         <Link
           href={
-            transaction
-              ? `/properties/detail?id=${transaction.propertyId}`
-              : "/properties"
+            transaction ? `/properties/detail?id=${transaction.propertyId}` : "/properties"
           }
           className="text-sm text-indigo-600 hover:underline"
         >
@@ -29,10 +24,7 @@ export function TransactionEdit() {
 
       <Card>
         {transaction ? (
-          <TransactionForm
-            key={transaction.id}
-            initialTransaction={transaction}
-          />
+          <TransactionForm key={transaction.id} initialTransaction={transaction} />
         ) : (
           <p className="text-sm text-slate-500">
             取引が見つかりませんでした（自動計上のローン返済は編集できません）。
