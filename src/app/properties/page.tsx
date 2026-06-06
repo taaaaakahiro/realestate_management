@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { analyzeProperty } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
@@ -10,10 +11,20 @@ import { useStore } from "@/data/store";
 
 export default function PropertiesPage() {
   const { properties, transactions, loans } = useStore();
+  const [showSold, setShowSold] = useState(false);
 
-  const analytics = properties.map((p) =>
-    analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
-  );
+  const soldCount = properties.filter((p) => p.status === "sold").length;
+
+  const analytics = properties
+    .filter((p) => showSold || p.status !== "sold")
+    // 取得前 → 保有中 → 売却済み の順に並べる
+    .sort((a, b) => {
+      const order = { prospect: 0, owned: 1, sold: 2 } as const;
+      return order[a.status] - order[b.status];
+    })
+    .map((p) =>
+      analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
+    );
 
   return (
     <div className="space-y-6">
@@ -34,11 +45,27 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {analytics.map((a) => (
-          <PropertyCard key={a.property.id} analytics={a} />
-        ))}
-      </div>
+      {soldCount > 0 && (
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={showSold}
+            onChange={(e) => setShowSold(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+          />
+          売却済みも表示する（{soldCount}件）
+        </label>
+      )}
+
+      {analytics.length === 0 ? (
+        <p className="text-sm text-slate-500">表示できる物件がありません。</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {analytics.map((a) => (
+            <PropertyCard key={a.property.id} analytics={a} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

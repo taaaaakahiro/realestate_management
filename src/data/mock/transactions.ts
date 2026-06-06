@@ -32,6 +32,8 @@ function generateTransactions(): Transaction[] {
   const txns: Transaction[] = [];
 
   mockProperties.forEach((p, pi) => {
+    // 取得前・売却済みは取引を生成しない（保有中のみ）
+    if (p.status !== "owned") return;
     const rand = seeded(pi * 9973 + 7);
     const start = new Date(p.purchaseDate);
     const total = monthsBetween(start, TODAY);

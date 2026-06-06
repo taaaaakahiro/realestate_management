@@ -4,9 +4,27 @@ export type PropertyType = "区分マンション" | "一棟アパート" | "戸
 
 export const PROPERTY_TYPES: PropertyType[] = ["区分マンション", "一棟アパート", "戸建て"];
 
+/** 物件のライフサイクル状態 */
+export type PropertyStatus = "prospect" | "owned" | "sold";
+
+export const PROPERTY_STATUSES: PropertyStatus[] = ["prospect", "owned", "sold"];
+
+export const STATUS_LABEL: Record<PropertyStatus, string> = {
+  prospect: "取得前",
+  owned: "保有中",
+  sold: "売却済み",
+};
+
+/** ポートフォリオ（回収率集計）の対象は「保有中」のみ */
+export function isInPortfolio(p: Pick<Property, "status">): boolean {
+  return p.status === "owned";
+}
+
 export interface Property {
   id: string;
   name: string;
+  /** ライフサイクル状態（取得前 / 保有中 / 売却済み） */
+  status: PropertyStatus;
   /** 郵便番号（ハイフンなし7桁） */
   postalCode: string;
   address: string;

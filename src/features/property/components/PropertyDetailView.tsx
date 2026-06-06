@@ -7,7 +7,7 @@ import {
   buildCumulativeSeries,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
-import { formatPostalCode } from "@/features/property/types";
+import { formatPostalCode, STATUS_LABEL } from "@/features/property/types";
 import { LoanPanel } from "@/features/loan/components/LoanPanel";
 import { propertyTransactions } from "@/features/loan/service";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
@@ -17,7 +17,7 @@ import { Button } from "@/shared/components/ui/Field";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
 import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
 import { TODAY_ISO } from "@/shared/lib/clock";
-import { deleteProperty, useStore } from "@/data/store";
+import { deleteProperty, updateProperty, useStore } from "@/data/store";
 
 export function PropertyDetailView() {
   const router = useRouter();
@@ -43,6 +43,7 @@ export function PropertyDetailView() {
     }
   }
 
+  const statusTone = { prospect: "neutral", owned: "success", sold: "expense" } as const;
   const loan = loans.find((l) => l.propertyId === property.id);
   const propertyTxns = propertyTransactions(property.id, transactions, loans, TODAY_ISO);
   const a = analyzeProperty(property, propertyTxns);
@@ -64,8 +65,35 @@ export function PropertyDetailView() {
               {property.address}
             </p>
           </div>
+          <Badge tone={statusTone[property.status]}>{STATUS_LABEL[property.status]}</Badge>
           <Badge tone="neutral">{property.type}</Badge>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
+            {property.status === "prospect" && (
+              <Button
+                type="button"
+                onClick={() => updateProperty(property.id, { status: "owned" })}
+              >
+                取得済みにする（ポートフォリオに追加）
+              </Button>
+            )}
+            {property.status === "owned" && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => updateProperty(property.id, { status: "sold" })}
+              >
+                売却済みにする
+              </Button>
+            )}
+            {property.status === "sold" && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => updateProperty(property.id, { status: "owned" })}
+              >
+                保有中に戻す
+              </Button>
+            )}
             <Link href={`/properties/edit?id=${property.id}`}>
               <Button type="button" variant="ghost">
                 編集
@@ -80,6 +108,13 @@ export function PropertyDetailView() {
             </button>
           </div>
         </div>
+        {property.status !== "owned" && (
+          <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
+            {property.status === "prospect"
+              ? "この物件は「取得前」のため、ポートフォリオ（回収率集計）には含まれません。"
+              : "この物件は「売却済み」のため、ポートフォリオ（回収率集計）には含まれません。"}
+          </p>
+        )}
       </div>
 
       {/* 回収率ハイライト */}

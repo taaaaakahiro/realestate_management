@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   iconForType,
+  PROPERTY_STATUSES,
   PROPERTY_TYPES,
+  STATUS_LABEL,
   type Property,
+  type PropertyStatus,
   type PropertyType,
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
@@ -66,6 +69,7 @@ export function PropertyForm({
     const sen = (k: string) => Math.round((Number(fd.get(k)) || 0) * 1000);
 
     const name = String(fd.get("name") ?? "").trim();
+    const status = String(fd.get("status") ?? "owned") as PropertyStatus;
     const type = String(fd.get("type") ?? "") as PropertyType;
     const purchaseDate = String(fd.get("purchaseDate") ?? "");
     const purchasePrice = sen("purchasePrice");
@@ -96,6 +100,7 @@ export function PropertyForm({
 
     const fields = {
       name,
+      status,
       postalCode: normalizeZip(postalCode),
       address: address.trim(),
       type,
@@ -142,6 +147,20 @@ export function PropertyForm({
           placeholder="例: グランドメゾン新宿"
           required
         />
+      </div>
+
+      <div>
+        <Label htmlFor="status">状態</Label>
+        <Select id="status" name="status" defaultValue={initialProperty?.status ?? "owned"}>
+          {PROPERTY_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-xs text-slate-500">
+          「取得前」はポートフォリオ（回収率集計）に含まれません。取得後に「保有中」へ切り替えできます。
+        </p>
       </div>
 
       <div>
