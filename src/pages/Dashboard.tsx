@@ -1,5 +1,3 @@
-"use client";
-
 import { analyzeProperty, summarizePortfolio } from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
@@ -8,10 +6,9 @@ import { propertyTransactions } from "@/features/loan/service";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { useStore } from "@/data/store";
 
-export default function DashboardPage() {
+export function Dashboard() {
   const { properties, transactions, loans } = useStore();
 
-  // ポートフォリオ集計は「保有中」のみ（取得前・売却済みは除外）
   const analytics = properties
     .filter(isInPortfolio)
     .map((p) =>

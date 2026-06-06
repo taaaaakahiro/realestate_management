@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/router";
 import type { Transaction, TransactionKind } from "@/features/transaction/types";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Select } from "@/shared/components/ui/Field";

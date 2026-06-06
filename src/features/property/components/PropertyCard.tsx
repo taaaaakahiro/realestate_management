@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/router";
 import type { PropertyAnalytics } from "@/features/analytics/service";
 import { STATUS_LABEL } from "@/features/property/types";
 import { Badge } from "@/shared/components/ui/Badge";

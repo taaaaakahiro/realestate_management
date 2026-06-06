@@ -1,11 +1,8 @@
-"use client";
-
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Link, useSearchParams } from "@/router";
 import { TransactionForm } from "@/features/transaction/components/TransactionForm";
 import { Card } from "@/shared/components/ui/Card";
 
-export function NewTransactionForm() {
+export function NewTransaction() {
   const propertyId = useSearchParams().get("propertyId") ?? undefined;
 
   return (
