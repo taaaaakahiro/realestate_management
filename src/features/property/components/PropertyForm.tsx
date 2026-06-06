@@ -56,11 +56,14 @@ export function PropertyForm({
   const [useLoan, setUseLoan] = useState(!!initialLoan);
   const [status, setStatus] = useState<PropertyStatus>(initialProperty?.status ?? "owned");
 
-  // 取得前は「想定家賃＋利回り」から物件価格を逆算する初期利回り
+  // 取得前は「想定家賃＋利回り」から物件価格を逆算する初期利回り（投資総額ベース）
+  const initialTotal = initialProperty
+    ? acquisitionCost(initialProperty) +
+      initialProperty.brokerageFee +
+      initialProperty.stampDuty
+    : 0;
   const initialYield =
-    initialProperty && acquisitionCost(initialProperty) > 0
-      ? ((initialProperty.monthlyRent * 12) / acquisitionCost(initialProperty)) * 100
-      : 8;
+    initialTotal > 0 ? ((initialProperty!.monthlyRent * 12) / initialTotal) * 100 : 8;
   const [targetYield, setTargetYield] = useState(
     initialProperty?.status === "prospect" ? initialYield.toFixed(2) : "8",
   );
@@ -88,23 +91,31 @@ export function PropertyForm({
   const rentYen = sen(monthlyRent);
   const isProspect = status === "prospect";
 
-  // 取得時の経費（取得原価に含む）＝ 不動産取得税 ＋ 固定資産税精算金（評価額・引き渡し日から算出。価格に依存しない）
+  // 取得時の経費（評価額・引き渡し日・仲介手数料は価格に依存しない）
   const acqTax = calcAcquisitionTax(landAssessedYen, buildingAssessedYen).total;
   const settlement = calcPropertyTaxSettlement(
     landAssessedYen,
     buildingAssessedYen,
     purchaseDate,
   ).settlement;
-  const acquisitionExpense = acqTax + settlement;
+  const brokerageYen = yen(brokerageFee);
+  const fixedExpense = acqTax + settlement + brokerageYen;
 
-  // 取得前: 想定家賃と目標利回りから取得原価を算出し、経費を引いて物件価格を逆算
+  // 取得前: 想定家賃と目標利回りから投資総額を算出し、経費を引いて物件価格を逆算
   const yieldPct = Number(targetYield) || 0;
-  const targetAcqCost =
+  const targetTotal =
     isProspect && yieldPct > 0 ? Math.round((rentYen * 12) / (yieldPct / 100)) : 0;
-  const derivedPrice = Math.max(
-    0,
-    Math.floor((targetAcqCost - acquisitionExpense) / 1000) * 1000,
-  );
+  // 印紙代は物件価格に依存（印紙税法の区分）するため反復で収束させる
+  const priceForStamp = (stamp: number) =>
+    Math.max(0, Math.floor((targetTotal - fixedExpense - stamp) / 1000) * 1000);
+  let stampDerived = 0;
+  for (let i = 0; i < 3; i++) {
+    const next = calcStampDuty(priceForStamp(stampDerived));
+    if (next === stampDerived) break;
+    stampDerived = next;
+  }
+  const derivedPrice = priceForStamp(stampDerived);
+  const acquisitionExpense = fixedExpense + calcStampDuty(derivedPrice);
 
   const priceYen = isProspect ? derivedPrice : sen(purchasePrice);
 
@@ -318,7 +329,7 @@ export function PropertyForm({
         </div>
         {isProspect ? (
           <div>
-            <Label htmlFor="targetYield">目標利回り（取得原価ベース %）</Label>
+            <Label htmlFor="targetYield">目標利回り（投資総額ベース %）</Label>
             <Input
               id="targetYield"
               type="number"
@@ -350,14 +361,16 @@ export function PropertyForm({
       {isProspect && (
         <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-sm">
           <p className="mb-1 text-xs text-slate-500">
-            想定家賃と目標利回りから取得原価を算出し、経費（取得税＋精算金）を引いて物件価格を逆算します。
+            想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
           </p>
           <div className="flex justify-between">
-            <span className="text-slate-500">取得原価（家賃 ÷ 利回り）</span>
-            <span className="tabular-nums text-slate-800">{formatYen(targetAcqCost)}</span>
+            <span className="text-slate-500">投資総額（家賃 ÷ 利回り）</span>
+            <span className="tabular-nums text-slate-800">{formatYen(targetTotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">− 経費（不動産取得税＋固定資産税精算金）</span>
+            <span className="text-slate-500">
+              − 経費（取得税＋精算金＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
+            </span>
             <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
           </div>
           <div className="mt-1 flex justify-between border-t border-indigo-100 pt-1">
