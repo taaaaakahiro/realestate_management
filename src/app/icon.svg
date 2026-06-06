@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="13" fill="#efece3" />
+  <g fill="none" stroke="#1b1b1b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 家（M字の柱）-->
+    <path d="M13 31 L25 19 L37 31" />
+    <path d="M15 31 V47" />
+    <path d="M25 25 V47" />
+    <path d="M35 31 V47" />
+    <!-- 鹿の角 -->
+    <path d="M45 47 V20" />
+    <path d="M45 27 l-6 -6 M45 27 l6 -6" />
+    <path d="M45 21 l-5 -7 M45 21 l5 -7" />
+  </g>
+</svg>

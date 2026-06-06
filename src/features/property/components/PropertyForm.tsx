@@ -514,7 +514,7 @@ export function PropertyForm({
                   min={0}
                   step={100}
                   placeholder="25000"
-                  defaultValue={initialLoan ? toSen(initialLoan.principal) : 0}
+                  defaultValue={initialLoan ? toSen(initialLoan.principal) : undefined}
                 />
               </div>
               <div>
@@ -538,7 +538,7 @@ export function PropertyForm({
                   min={0}
                   step={0.01}
                   placeholder="1.80"
-                  defaultValue={initialLoan?.ratePeriods[0]?.annualRatePercent ?? 0}
+                  defaultValue={initialLoan?.ratePeriods[0]?.annualRatePercent}
                 />
               </div>
               <div>
@@ -550,7 +550,7 @@ export function PropertyForm({
                   min={0}
                   step={1}
                   placeholder="35"
-                  defaultValue={initialLoan ? initialLoan.termMonths / 12 : 0}
+                  defaultValue={initialLoan ? initialLoan.termMonths / 12 : undefined}
                 />
               </div>
             </FormRow>
