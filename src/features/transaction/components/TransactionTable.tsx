@@ -1,10 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { Transaction, TransactionKind } from "@/features/transaction/types";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Select } from "@/shared/components/ui/Field";
 import { formatDate, formatYen } from "@/shared/lib/format";
+import { deleteTransaction } from "@/data/store";
+
+/** 自動計上（ローン返済）は編集・削除不可。手動登録分のみ操作できる。 */
+const isEditable = (t: Transaction) => !t.id.startsWith("loan-");
 
 const PAGE_SIZE_OPTIONS = [50, 100, 200];
 
@@ -90,6 +95,7 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                 <th className="px-4 py-2.5 font-medium">科目</th>
                 <th className="px-4 py-2.5 font-medium">メモ / 内訳</th>
                 <th className="px-4 py-2.5 text-right font-medium">金額</th>
+                <th className="px-4 py-2.5 text-right font-medium">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -124,6 +130,29 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                     >
                       {income ? "+" : "−"}
                       {formatYen(t.amount)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {isEditable(t) ? (
+                        <span className="flex justify-end gap-2">
+                          <Link
+                            href={`/transactions/edit?id=${t.id}`}
+                            className="text-indigo-600 hover:underline"
+                          >
+                            編集
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("この取引を削除しますか？")) deleteTransaction(t.id);
+                            }}
+                            className="text-rose-600 hover:underline"
+                          >
+                            削除
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">自動</span>
+                      )}
                     </td>
                   </tr>
                 );

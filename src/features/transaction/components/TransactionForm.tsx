@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  type Transaction,
   type TransactionCategory,
   type TransactionKind,
 } from "@/features/transaction/types";
 import { iconForType } from "@/features/property/types";
 import { splitPayment } from "@/features/loan/amortization";
-import { addTransaction, useStore } from "@/data/store";
-import { formatYen } from "@/shared/lib/format";
+import { addTransaction, updateTransaction, useStore } from "@/data/store";
+import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
   Button,
   FormRow,
@@ -22,16 +23,26 @@ import {
   Textarea,
 } from "@/shared/components/ui/Field";
 
-export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: string }) {
+export function TransactionForm({
+  defaultPropertyId,
+  initialTransaction,
+}: {
+  defaultPropertyId?: string;
+  initialTransaction?: Transaction;
+}) {
   const router = useRouter();
   const { properties, loans } = useStore();
+  const isEdit = !!initialTransaction;
+  const t0 = initialTransaction;
 
-  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
-  const [kind, setKind] = useState<TransactionKind>("income");
-  const [category, setCategory] = useState<TransactionCategory>("家賃");
-  const [date, setDate] = useState("");
-  const [amount, setAmount] = useState("");
-  const [memo, setMemo] = useState("");
+  const [propertyId, setPropertyId] = useState(
+    t0?.propertyId ?? defaultPropertyId ?? properties[0]?.id ?? "",
+  );
+  const [kind, setKind] = useState<TransactionKind>(t0?.kind ?? "income");
+  const [category, setCategory] = useState<TransactionCategory>(t0?.category ?? "家賃");
+  const [date, setDate] = useState(t0?.date ?? "");
+  const [amount, setAmount] = useState(t0 ? String(t0.amount) : "");
+  const [memo, setMemo] = useState(t0?.memo ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -76,12 +87,13 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         return setError(
           "この物件には融資が登録されていません。物件登録時に融資を設定してください。",
         );
-      breakdown = splitPayment(loan, date, amt);
+      const split = splitPayment(loan, date, amt);
+      breakdown = { principal: split.principal, interest: split.interest };
     }
 
     setError(null);
     setPending(true);
-    addTransaction({
+    const payload = {
       propertyId,
       kind,
       category,
@@ -89,7 +101,9 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
       amount: amt,
       memo: memo.trim() || undefined,
       breakdown,
-    });
+    };
+    if (isEdit) updateTransaction(t0!.id, payload);
+    else addTransaction(payload);
     router.push(`/properties/detail?id=${propertyId}`);
   }
 
@@ -165,17 +179,32 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         </div>
       </FormRow>
 
-      {/* ローン返済の内訳プレビュー */}
+      {/* ローン返済の内訳プレビュー（適用金利を考慮して自動分解） */}
       {isLoanRepayment && (
-        <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
           {!loan ? (
             <span className="text-rose-600">この物件には融資が登録されていません。</span>
           ) : preview ? (
-            <span className="text-slate-700">
-              内訳 → 元本 <strong className="tabular-nums">{formatYen(preview.principal)}</strong>
-              <span className="text-slate-300"> ・ </span>
-              利息 <strong className="tabular-nums">{formatYen(preview.interest)}</strong>
-            </span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>適用金利 {formatPercent(preview.ratePercent, 2)}（年率）</span>
+                <span>返済前残高 {formatYen(preview.balanceBefore)}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-slate-700">
+                  元本{" "}
+                  <strong className="tabular-nums text-slate-900">
+                    {formatYen(preview.principal)}
+                  </strong>
+                </span>
+                <span className="text-slate-700">
+                  利息{" "}
+                  <strong className="tabular-nums text-rose-600">
+                    {formatYen(preview.interest)}
+                  </strong>
+                </span>
+              </div>
+            </div>
           ) : (
             <span className="text-slate-500">計上日と返済額を入力すると内訳を表示します。</span>
           )}
@@ -199,9 +228,9 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "登録中..." : "取引を登録"}
+          {pending ? "保存中..." : isEdit ? "更新する" : "取引を登録"}
         </Button>
-        <Link href="/properties">
+        <Link href={isEdit ? `/properties/detail?id=${propertyId}` : "/properties"}>
           <Button type="button" variant="ghost">
             キャンセル
           </Button>

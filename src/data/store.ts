@@ -26,7 +26,7 @@ export interface StoreData {
 }
 
 // スキーマ変更時はバージョンを上げて古い localStorage を無効化する
-const KEY = "realestate-store-v3";
+const KEY = "realestate-store-v5";
 
 /** ビルド時／初回レンダリングで使う不変のシード */
 const SEED: StoreData = {
@@ -126,6 +126,29 @@ export function addTransaction(input: Omit<Transaction, "id">): Transaction {
   persist();
   emit();
   return transaction;
+}
+
+export function updateTransaction(
+  id: string,
+  patch: Partial<Omit<Transaction, "id">>,
+): void {
+  state = {
+    ...state,
+    transactions: state.transactions.map((t) =>
+      t.id === id ? { ...t, ...patch } : t,
+    ),
+  };
+  persist();
+  emit();
+}
+
+export function deleteTransaction(id: string): void {
+  state = {
+    ...state,
+    transactions: state.transactions.filter((t) => t.id !== id),
+  };
+  persist();
+  emit();
 }
 
 /** 物件に紐づく融資を登録（1物件1融資。既存があれば置き換え） */

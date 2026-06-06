@@ -4,24 +4,37 @@ import { useState } from "react";
 import Link from "next/link";
 import { analyzeProperty } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
+import { STATUS_LABEL, type PropertyStatus } from "@/features/property/types";
 import { propertyTransactions } from "@/features/loan/service";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { Button } from "@/shared/components/ui/Field";
+import { cn } from "@/shared/lib/cn";
 import { useStore } from "@/data/store";
+
+const STATUS_ORDER: Record<PropertyStatus, number> = { prospect: 0, owned: 1, sold: 2 };
+type Filter = "all" | PropertyStatus;
 
 export default function PropertiesPage() {
   const { properties, transactions, loans } = useStore();
-  const [showSold, setShowSold] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
 
-  const soldCount = properties.filter((p) => p.status === "sold").length;
+  const counts: Record<Filter, number> = {
+    all: properties.length,
+    prospect: properties.filter((p) => p.status === "prospect").length,
+    owned: properties.filter((p) => p.status === "owned").length,
+    sold: properties.filter((p) => p.status === "sold").length,
+  };
+
+  const filters: { key: Filter; label: string }[] = [
+    { key: "all", label: "すべて" },
+    { key: "prospect", label: STATUS_LABEL.prospect },
+    { key: "owned", label: STATUS_LABEL.owned },
+    { key: "sold", label: STATUS_LABEL.sold },
+  ];
 
   const analytics = properties
-    .filter((p) => showSold || p.status !== "sold")
-    // 取得前 → 保有中 → 売却済み の順に並べる
-    .sort((a, b) => {
-      const order = { prospect: 0, owned: 1, sold: 2 } as const;
-      return order[a.status] - order[b.status];
-    })
+    .filter((p) => filter === "all" || p.status === filter)
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
     .map((p) =>
       analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
     );
@@ -45,20 +58,30 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {soldCount > 0 && (
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            checked={showSold}
-            onChange={(e) => setShowSold(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
-          />
-          売却済みも表示する（{soldCount}件）
-        </label>
-      )}
+      {/* 状態フィルター */}
+      <div className="flex flex-wrap gap-2">
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              "rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
+              filter === f.key
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+            )}
+          >
+            {f.label}
+            <span className={cn("ml-1.5 text-xs", filter === f.key ? "text-indigo-100" : "text-slate-400")}>
+              {counts[f.key]}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {analytics.length === 0 ? (
-        <p className="text-sm text-slate-500">表示できる物件がありません。</p>
+        <p className="text-sm text-slate-500">該当する物件がありません。</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {analytics.map((a) => (

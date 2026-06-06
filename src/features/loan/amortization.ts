@@ -105,20 +105,34 @@ export function loanTransactions(loan: Loan, untilISO: string): Transaction[] {
   return txns;
 }
 
+export interface PaymentSplit {
+  principal: number;
+  interest: number;
+  /** その月に適用された年利(%) */
+  ratePercent: number;
+  /** 利息計算の基礎となる返済前残高 */
+  balanceBefore: number;
+}
+
 /**
- * 指定日に入力された返済額を、元本・利息に分解する。
- * 利息はその月の残高×金利（返済スケジュール基準）から求め、元本 = 返済額 − 利息。
+ * 指定日に入力された返済額を、適用金利を考慮して元本・利息に分解する。
+ * 利息はその月の残高×適用金利（返済スケジュール基準）から求め、元本 = 返済額 − 利息。
  */
-export function splitPayment(
-  loan: Loan,
-  dateISO: string,
-  payment: number,
-): { principal: number; interest: number } {
+export function splitPayment(loan: Loan, dateISO: string, payment: number): PaymentSplit {
   const target = ym(monthStart(dateISO));
-  const row = buildSchedule(loan).find((r) => r.month === target);
+  const schedule = buildSchedule(loan);
+  const idx = schedule.findIndex((r) => r.month === target);
+  const row = idx >= 0 ? schedule[idx] : undefined;
+  // 返済前残高 = 当月行の残高 + 当月元本（= 前月末残高）
+  const balanceBefore = row ? row.balance + row.principal : 0;
   const pay = Math.round(payment);
   const interest = Math.min(row ? row.interest : 0, pay);
-  return { principal: pay - interest, interest };
+  return {
+    principal: pay - interest,
+    interest,
+    ratePercent: row ? row.ratePercent : 0,
+    balanceBefore,
+  };
 }
 
 export interface LoanSummary {

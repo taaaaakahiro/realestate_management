@@ -14,7 +14,9 @@ import {
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
 import { REPAYMENT_METHODS, type Loan, type RepaymentMethod } from "@/features/loan/types";
+import { calcStampDuty, DEFAULT_BROKERAGE_FEE, simulate } from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
+import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
   Button,
   FormRow,
@@ -25,6 +27,8 @@ import {
 
 /** 円 → 千円（入力欄の初期値用） */
 const toSen = (yen: number) => Math.round(yen / 1000);
+const sen = (s: string) => Math.round((Number(s) || 0) * 1000);
+const yen = (s: string) => Math.max(0, Math.round(Number(s) || 0));
 
 export function PropertyForm({
   initialProperty,
@@ -43,6 +47,40 @@ export function PropertyForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [useLoan, setUseLoan] = useState(!!initialLoan);
+
+  // 金額・シミュレーション系は live 計算のため state で管理（千円/円）
+  const [purchaseDate, setPurchaseDate] = useState(initialProperty?.purchaseDate ?? "");
+  const [purchasePrice, setPurchasePrice] = useState(
+    initialProperty ? String(toSen(initialProperty.purchasePrice)) : "",
+  );
+  const [landAssessed, setLandAssessed] = useState(
+    initialProperty ? String(toSen(initialProperty.landAssessedValue)) : "",
+  );
+  const [buildingAssessed, setBuildingAssessed] = useState(
+    initialProperty ? String(toSen(initialProperty.buildingAssessedValue)) : "",
+  );
+  const [brokerageFee, setBrokerageFee] = useState(
+    String(initialProperty?.brokerageFee ?? DEFAULT_BROKERAGE_FEE),
+  );
+  const [monthlyRent, setMonthlyRent] = useState(
+    initialProperty ? String(toSen(initialProperty.monthlyRent)) : "",
+  );
+
+  const priceYen = sen(purchasePrice);
+  const landAssessedYen = sen(landAssessed);
+  const buildingAssessedYen = sen(buildingAssessed);
+  const rentYen = sen(monthlyRent);
+
+  const sim = simulate({
+    purchasePrice: priceYen,
+    landAssessedValue: landAssessedYen,
+    buildingAssessedValue: buildingAssessedYen,
+    handoverDate: purchaseDate,
+    monthlyRent: rentYen,
+    brokerageFee: yen(brokerageFee),
+  });
+  const hasAssessed = landAssessedYen + buildingAssessedYen > 0;
+  const showSim = priceYen > 0 && hasAssessed;
 
   async function lookupZip(code: string) {
     const normalized = normalizeZip(code);
@@ -65,29 +103,21 @@ export function PropertyForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const num = (k: string) => Number(fd.get(k));
-    const sen = (k: string) => Math.round((Number(fd.get(k)) || 0) * 1000);
-
     const name = String(fd.get("name") ?? "").trim();
     const status = String(fd.get("status") ?? "owned") as PropertyStatus;
     const type = String(fd.get("type") ?? "") as PropertyType;
-    const purchaseDate = String(fd.get("purchaseDate") ?? "");
-    const purchasePrice = sen("purchasePrice");
-    const realEstateAcquisitionTax = sen("realEstateAcquisitionTax");
-    const propertyTaxSettlement = num("propertyTaxSettlement"); // 円単位
-    const monthlyRent = sen("monthlyRent");
 
-    const loanPrincipal = useLoan ? sen("loanPrincipal") : 0;
-    const loanRate = num("loanRate");
-    const loanYears = num("loanYears");
+    const loanPrincipal = useLoan ? sen(String(fd.get("loanPrincipal") ?? "")) : 0;
+    const loanRate = Number(fd.get("loanRate")) || 0;
+    const loanYears = Number(fd.get("loanYears")) || 0;
     const loanMethod = String(fd.get("loanMethod") ?? "元利均等") as RepaymentMethod;
     const loanStartDate = String(fd.get("loanStartDate") ?? "") || purchaseDate;
 
     if (!name) return setError("物件名を入力してください。");
     if (!PROPERTY_TYPES.includes(type)) return setError("物件種別を選択してください。");
-    if (!purchaseDate) return setError("取得日を入力してください。");
-    if (!(purchasePrice > 0)) return setError("物件価格は正の数で入力してください。");
-    if (!(monthlyRent > 0)) return setError("想定月額家賃は正の数で入力してください。");
+    if (!purchaseDate) return setError("取得日（引き渡し予定日）を入力してください。");
+    if (!(priceYen > 0)) return setError("物件価格は正の数で入力してください。");
+    if (!(rentYen > 0)) return setError("想定月額家賃は正の数で入力してください。");
     if (useLoan && !(loanPrincipal > 0))
       return setError("融資を利用する場合は借入元本を入力してください。");
     if (useLoan && !(loanYears > 0))
@@ -104,11 +134,15 @@ export function PropertyForm({
       postalCode: normalizeZip(postalCode),
       address: address.trim(),
       type,
-      purchasePrice,
-      realEstateAcquisitionTax: Math.max(0, realEstateAcquisitionTax || 0),
-      propertyTaxSettlement: Math.max(0, propertyTaxSettlement || 0),
+      purchasePrice: priceYen,
+      landAssessedValue: landAssessedYen,
+      buildingAssessedValue: buildingAssessedYen,
+      brokerageFee: yen(brokerageFee),
+      stampDuty: calcStampDuty(priceYen),
+      realEstateAcquisitionTax: sim.acquisitionTax.total,
+      propertyTaxSettlement: sim.settlement.settlement,
       purchaseDate,
-      monthlyRent,
+      monthlyRent: rentYen,
       emoji: iconForType(type),
     };
 
@@ -116,7 +150,6 @@ export function PropertyForm({
     if (isEdit) updateProperty(propertyId, fields);
 
     if (useLoan && loanPrincipal > 0) {
-      // 金利変更履歴（2件目以降）は保持し、当初金利・開始日のみ更新する
       const tail = initialLoan ? initialLoan.ratePeriods.slice(1) : [];
       addLoan({
         propertyId,
@@ -125,7 +158,7 @@ export function PropertyForm({
         termMonths: Math.round(loanYears * 12),
         method: loanMethod,
         ratePeriods: [
-          { from: loanStartDate, annualRatePercent: Math.max(0, loanRate || 0) },
+          { from: loanStartDate, annualRatePercent: Math.max(0, loanRate) },
           ...tail,
         ],
       });
@@ -179,12 +212,7 @@ export function PropertyForm({
             placeholder="160-0023"
             className="max-w-[180px]"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={zipLoading}
-            onClick={() => lookupZip(postalCode)}
-          >
+          <Button type="button" variant="ghost" disabled={zipLoading} onClick={() => lookupZip(postalCode)}>
             {zipLoading ? "検索中..." : "住所を検索"}
           </Button>
         </div>
@@ -205,11 +233,7 @@ export function PropertyForm({
       <FormRow>
         <div>
           <Label htmlFor="type">物件種別</Label>
-          <Select
-            id="type"
-            name="type"
-            defaultValue={initialProperty?.type ?? PROPERTY_TYPES[0]}
-          >
+          <Select id="type" name="type" defaultValue={initialProperty?.type ?? PROPERTY_TYPES[0]}>
             {PROPERTY_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -218,75 +242,152 @@ export function PropertyForm({
           </Select>
         </div>
         <div>
-          <Label htmlFor="purchaseDate">取得日</Label>
+          <Label htmlFor="purchaseDate">取得日（引き渡し予定日）</Label>
           <Input
             id="purchaseDate"
-            name="purchaseDate"
             type="date"
-            defaultValue={initialProperty?.purchaseDate}
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
             required
           />
         </div>
       </FormRow>
 
-      <div>
-        <Label htmlFor="purchasePrice">物件価格（千円）</Label>
-        <Input
-          id="purchasePrice"
-          name="purchasePrice"
-          type="number"
-          min={0}
-          step={100}
-          placeholder="28000"
-          defaultValue={initialProperty ? toSen(initialProperty.purchasePrice) : undefined}
-          required
-        />
-      </div>
-
       <FormRow>
         <div>
-          <Label htmlFor="realEstateAcquisitionTax">不動産取得税（千円）</Label>
+          <Label htmlFor="purchasePrice">物件価格（千円）</Label>
           <Input
-            id="realEstateAcquisitionTax"
-            name="realEstateAcquisitionTax"
+            id="purchasePrice"
             type="number"
             min={0}
-            step={10}
-            placeholder="420"
-            defaultValue={initialProperty ? toSen(initialProperty.realEstateAcquisitionTax) : 0}
+            step={100}
+            placeholder="28000"
+            value={purchasePrice}
+            onChange={(e) => setPurchasePrice(e.target.value)}
+            required
           />
         </div>
         <div>
-          <Label htmlFor="propertyTaxSettlement">固定資産税清算金（円）</Label>
+          <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
           <Input
-            id="propertyTaxSettlement"
-            name="propertyTaxSettlement"
+            id="monthlyRent"
             type="number"
             min={0}
             step={1}
-            placeholder="95000"
-            defaultValue={initialProperty?.propertyTaxSettlement ?? 0}
+            placeholder="138"
+            value={monthlyRent}
+            onChange={(e) => setMonthlyRent(e.target.value)}
+            required
           />
         </div>
       </FormRow>
 
-      <p className="-mt-2 text-xs text-slate-500">
-        取得原価 = 物件価格 + 不動産取得税 + 固定資産税清算金
-      </p>
+      {/* 取得シミュレーション（評価額・引き渡し日から自動計算） */}
+      <fieldset className="space-y-4 rounded-xl border border-slate-200 p-4">
+        <legend className="px-1 text-sm font-semibold text-slate-700">
+          取得シミュレーション
+        </legend>
 
-      <div>
-        <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
-        <Input
-          id="monthlyRent"
-          name="monthlyRent"
-          type="number"
-          min={0}
-          step={1}
-          placeholder="138"
-          defaultValue={initialProperty ? toSen(initialProperty.monthlyRent) : undefined}
-          required
-        />
-      </div>
+        <FormRow>
+          <div>
+            <Label htmlFor="landAssessed">土地の評価額（千円）</Label>
+            <Input
+              id="landAssessed"
+              type="number"
+              min={0}
+              step={100}
+              placeholder="8000"
+              value={landAssessed}
+              onChange={(e) => setLandAssessed(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="buildingAssessed">建物の評価額（千円）</Label>
+            <Input
+              id="buildingAssessed"
+              type="number"
+              min={0}
+              step={100}
+              placeholder="6000"
+              value={buildingAssessed}
+              onChange={(e) => setBuildingAssessed(e.target.value)}
+            />
+          </div>
+        </FormRow>
+
+        <div>
+          <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
+          <Input
+            id="brokerageFee"
+            type="number"
+            min={0}
+            step={1000}
+            placeholder="330000"
+            value={brokerageFee}
+            onChange={(e) => setBrokerageFee(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            印紙代は物件価格から印紙税法に基づき自動計算します。
+          </p>
+        </div>
+
+        {showSim ? (
+          <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-500">価格按分（評価額比・端数は土地）</span>
+              <span className="tabular-nums text-slate-800">
+                土地 {formatYen(sim.land)} / 建物 {formatYen(sim.building)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">不動産取得税（自動）</span>
+              <span className="tabular-nums text-slate-800">
+                {formatYen(sim.acquisitionTax.total)}
+                <span className="ml-1 text-xs text-slate-400">
+                  （土地 {formatYen(sim.acquisitionTax.landTax)}・建物{" "}
+                  {formatYen(sim.acquisitionTax.buildingTax)}）
+                </span>
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">
+                固定資産税精算金（自動・引き渡し日〜年末 {sim.settlement.remainingDays}/
+                {sim.settlement.totalDays}日）
+              </span>
+              <span className="tabular-nums text-slate-800">
+                {formatYen(sim.settlement.settlement)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">印紙代（自動・印紙税法）</span>
+              <span className="tabular-nums text-slate-800">{formatYen(sim.stampDuty)}</span>
+            </div>
+            <hr className="border-slate-200" />
+            <div className="flex justify-between">
+              <span className="text-slate-500">取得原価</span>
+              <span className="tabular-nums font-semibold text-slate-900">
+                {formatYen(sim.acquisitionCost)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">初期費用合計（仲介・印紙含む）</span>
+              <span className="tabular-nums font-semibold text-slate-900">
+                {formatYen(sim.initialCostTotal)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">表面利回り / 実質利回り（概算）</span>
+              <span className="tabular-nums font-semibold text-indigo-600">
+                {formatPercent(sim.grossYield)} / {formatPercent(sim.netYield)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            物件価格と土地・建物の評価額を入力すると、按分・不動産取得税・固定資産税精算金・利回りを自動計算します。
+          </p>
+        )}
+      </fieldset>
 
       {/* 融資（任意） */}
       <fieldset className="rounded-xl border border-slate-200 p-4">
@@ -355,11 +456,7 @@ export function PropertyForm({
             </FormRow>
             <div>
               <Label htmlFor="loanMethod">返済方式</Label>
-              <Select
-                id="loanMethod"
-                name="loanMethod"
-                defaultValue={initialLoan?.method ?? REPAYMENT_METHODS[0]}
-              >
+              <Select id="loanMethod" name="loanMethod" defaultValue={initialLoan?.method ?? REPAYMENT_METHODS[0]}>
                 {REPAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {m}
