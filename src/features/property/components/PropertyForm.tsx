@@ -28,6 +28,7 @@ export function PropertyForm() {
   const [zipLoading, setZipLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [useLoan, setUseLoan] = useState(false);
 
   async function lookupZip(code: string) {
     const normalized = normalizeZip(code);
@@ -60,7 +61,7 @@ export function PropertyForm() {
     const propertyTaxSettlement = num("propertyTaxSettlement");
     const monthlyRent = num("monthlyRent");
 
-    const loanPrincipal = num("loanPrincipal");
+    const loanPrincipal = useLoan ? num("loanPrincipal") : 0;
     const loanRate = num("loanRate");
     const loanYears = num("loanYears");
     const loanMethod = String(fd.get("loanMethod") ?? "元利均等") as RepaymentMethod;
@@ -70,8 +71,10 @@ export function PropertyForm() {
     if (!purchaseDate) return setError("取得日を入力してください。");
     if (!(purchasePrice > 0)) return setError("物件価格は正の数で入力してください。");
     if (!(monthlyRent > 0)) return setError("想定月額家賃は正の数で入力してください。");
-    if (loanPrincipal > 0 && !(loanYears > 0))
-      return setError("融資を入力する場合は返済期間（年）を入力してください。");
+    if (useLoan && !(loanPrincipal > 0))
+      return setError("融資を利用する場合は借入元本を入力してください。");
+    if (useLoan && !(loanYears > 0))
+      return setError("融資を利用する場合は返済期間（年）を入力してください。");
 
     setError(null);
     setPending(true);
@@ -88,7 +91,7 @@ export function PropertyForm() {
       emoji: iconForType(type),
     });
 
-    if (loanPrincipal > 0) {
+    if (useLoan && loanPrincipal > 0) {
       addLoan({
         propertyId: created.id,
         principal: loanPrincipal,
@@ -223,64 +226,78 @@ export function PropertyForm() {
 
       {/* 融資（任意） */}
       <fieldset className="rounded-xl border border-slate-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-slate-700">
-          融資（任意・現金購入なら空欄）
-        </legend>
-        <FormRow>
-          <div>
-            <Label htmlFor="loanPrincipal">借入元本（円）</Label>
-            <Input
-              id="loanPrincipal"
-              name="loanPrincipal"
-              type="number"
-              min={0}
-              step={100000}
-              placeholder="25000000"
-              defaultValue={0}
-            />
+        <legend className="px-1 text-sm font-semibold text-slate-700">融資</legend>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={useLoan}
+            onChange={(e) => setUseLoan(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+          />
+          融資を利用する（ローンを組む）
+        </label>
+
+        {useLoan ? (
+          <div className="mt-4 space-y-4">
+            <FormRow>
+              <div>
+                <Label htmlFor="loanPrincipal">借入元本（円）</Label>
+                <Input
+                  id="loanPrincipal"
+                  name="loanPrincipal"
+                  type="number"
+                  min={0}
+                  step={100000}
+                  placeholder="25000000"
+                  defaultValue={0}
+                />
+              </div>
+              <div>
+                <Label htmlFor="loanRate">当初金利（年率 %）</Label>
+                <Input
+                  id="loanRate"
+                  name="loanRate"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="1.80"
+                  defaultValue={0}
+                />
+              </div>
+            </FormRow>
+            <FormRow>
+              <div>
+                <Label htmlFor="loanYears">返済期間（年）</Label>
+                <Input
+                  id="loanYears"
+                  name="loanYears"
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="35"
+                  defaultValue={0}
+                />
+              </div>
+              <div>
+                <Label htmlFor="loanMethod">返済方式</Label>
+                <Select id="loanMethod" name="loanMethod" defaultValue={REPAYMENT_METHODS[0]}>
+                  {REPAYMENT_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </FormRow>
+            <p className="text-xs text-slate-500">
+              毎月の返済は元本・利息に自動で分解されます。金利の途中変更は物件詳細から登録できます。
+            </p>
           </div>
-          <div>
-            <Label htmlFor="loanRate">当初金利（年率 %）</Label>
-            <Input
-              id="loanRate"
-              name="loanRate"
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder="1.80"
-              defaultValue={0}
-            />
-          </div>
-        </FormRow>
-        <div className="mt-4">
-          <FormRow>
-            <div>
-              <Label htmlFor="loanYears">返済期間（年）</Label>
-              <Input
-                id="loanYears"
-                name="loanYears"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="35"
-                defaultValue={0}
-              />
-            </div>
-            <div>
-              <Label htmlFor="loanMethod">返済方式</Label>
-              <Select id="loanMethod" name="loanMethod" defaultValue={REPAYMENT_METHODS[0]}>
-                {REPAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </FormRow>
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          毎月の返済は元本・利息に自動で分解されます。金利の途中変更は物件詳細から登録できます。
-        </p>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">
+            現金購入の場合はチェック不要です。
+          </p>
+        )}
       </fieldset>
 
       {error && (
