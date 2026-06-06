@@ -128,6 +128,29 @@ export function addTransaction(input: Omit<Transaction, "id">): Transaction {
   return transaction;
 }
 
+export function updateTransaction(
+  id: string,
+  patch: Partial<Omit<Transaction, "id">>,
+): void {
+  state = {
+    ...state,
+    transactions: state.transactions.map((t) =>
+      t.id === id ? { ...t, ...patch } : t,
+    ),
+  };
+  persist();
+  emit();
+}
+
+export function deleteTransaction(id: string): void {
+  state = {
+    ...state,
+    transactions: state.transactions.filter((t) => t.id !== id),
+  };
+  persist();
+  emit();
+}
+
 /** 物件に紐づく融資を登録（1物件1融資。既存があれば置き換え） */
 export function addLoan(loan: Loan): Loan {
   const loans = [...state.loans.filter((l) => l.propertyId !== loan.propertyId), loan];

@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  type Transaction,
   type TransactionCategory,
   type TransactionKind,
 } from "@/features/transaction/types";
 import { iconForType } from "@/features/property/types";
 import { splitPayment } from "@/features/loan/amortization";
-import { addTransaction, useStore } from "@/data/store";
+import { addTransaction, updateTransaction, useStore } from "@/data/store";
 import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
   Button,
@@ -22,16 +23,26 @@ import {
   Textarea,
 } from "@/shared/components/ui/Field";
 
-export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: string }) {
+export function TransactionForm({
+  defaultPropertyId,
+  initialTransaction,
+}: {
+  defaultPropertyId?: string;
+  initialTransaction?: Transaction;
+}) {
   const router = useRouter();
   const { properties, loans } = useStore();
+  const isEdit = !!initialTransaction;
+  const t0 = initialTransaction;
 
-  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
-  const [kind, setKind] = useState<TransactionKind>("income");
-  const [category, setCategory] = useState<TransactionCategory>("家賃");
-  const [date, setDate] = useState("");
-  const [amount, setAmount] = useState("");
-  const [memo, setMemo] = useState("");
+  const [propertyId, setPropertyId] = useState(
+    t0?.propertyId ?? defaultPropertyId ?? properties[0]?.id ?? "",
+  );
+  const [kind, setKind] = useState<TransactionKind>(t0?.kind ?? "income");
+  const [category, setCategory] = useState<TransactionCategory>(t0?.category ?? "家賃");
+  const [date, setDate] = useState(t0?.date ?? "");
+  const [amount, setAmount] = useState(t0 ? String(t0.amount) : "");
+  const [memo, setMemo] = useState(t0?.memo ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -82,7 +93,7 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
 
     setError(null);
     setPending(true);
-    addTransaction({
+    const payload = {
       propertyId,
       kind,
       category,
@@ -90,7 +101,9 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
       amount: amt,
       memo: memo.trim() || undefined,
       breakdown,
-    });
+    };
+    if (isEdit) updateTransaction(t0!.id, payload);
+    else addTransaction(payload);
     router.push(`/properties/detail?id=${propertyId}`);
   }
 
@@ -215,9 +228,9 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "登録中..." : "取引を登録"}
+          {pending ? "保存中..." : isEdit ? "更新する" : "取引を登録"}
         </Button>
-        <Link href="/properties">
+        <Link href={isEdit ? `/properties/detail?id=${propertyId}` : "/properties"}>
           <Button type="button" variant="ghost">
             キャンセル
           </Button>
