@@ -29,7 +29,9 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      # npm install を使う（npm ci だと OS 別のネイティブ依存
+      # lightningcss/@tailwindcss/oxide の linux バイナリが入らない既知問題の回避）
+      - run: npm install
 
       - name: Build (Vite)
         run: npm run build
