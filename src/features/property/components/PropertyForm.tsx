@@ -14,6 +14,8 @@ import {
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
 import { REPAYMENT_METHODS, type Loan, type RepaymentMethod } from "@/features/loan/types";
+import { BANKS } from "@/features/loan/banks";
+import { SearchSelect } from "@/shared/components/ui/SearchSelect";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
@@ -22,7 +24,7 @@ import {
   simulate,
 } from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
-import { formatPercent, formatYen } from "@/shared/lib/format";
+import { formatPercent, formatYen, withThousands } from "@/shared/lib/format";
 import { isValidDate, sanitizeNumberInput, validateNumber } from "@/shared/lib/validation";
 import {
   Button,
@@ -100,6 +102,7 @@ export function PropertyForm({
   const [loanMethod, setLoanMethod] = useState<RepaymentMethod>(
     initialLoan?.method ?? REPAYMENT_METHODS[0],
   );
+  const [loanBank, setLoanBank] = useState(initialLoan?.bankName ?? "");
 
   const landAssessedYen = sen(landAssessed);
   const buildingAssessedYen = sen(buildingAssessed);
@@ -267,6 +270,7 @@ export function PropertyForm({
       const tail = initialLoan ? initialLoan.ratePeriods.slice(1) : [];
       addLoan({
         propertyId,
+        bankName: loanBank.trim() || undefined,
         principal: loanInput.principal,
         startDate: loanInput.start,
         termMonths: Math.round(loanInput.years * 12),
@@ -378,12 +382,10 @@ export function PropertyForm({
           <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
           <Input
             id="monthlyRent"
-            type="number"
-            min={0}
-            step={1}
+            type="text"
             placeholder="138"
             inputMode="numeric"
-            value={monthlyRent}
+            value={withThousands(monthlyRent)}
             onChange={(e) => setMonthlyRent(sanitizeNumberInput(e.target.value))}
             required
           />
@@ -408,12 +410,10 @@ export function PropertyForm({
             <Label htmlFor="purchasePrice">物件価格（千円）</Label>
             <Input
               id="purchasePrice"
-              type="number"
-              min={0}
-              step={100}
+              type="text"
               placeholder="28000"
               inputMode="numeric"
-              value={purchasePrice}
+              value={withThousands(purchasePrice)}
               onChange={(e) => setPurchasePrice(sanitizeNumberInput(e.target.value))}
               required
             />
@@ -456,12 +456,10 @@ export function PropertyForm({
             <Label htmlFor="landAssessed">土地の評価額（千円）</Label>
             <Input
               id="landAssessed"
-              type="number"
-              min={0}
-              step={100}
+              type="text"
               placeholder="8000"
               inputMode="numeric"
-              value={landAssessed}
+              value={withThousands(landAssessed)}
               onChange={(e) => setLandAssessed(sanitizeNumberInput(e.target.value))}
             />
           </div>
@@ -469,12 +467,10 @@ export function PropertyForm({
             <Label htmlFor="buildingAssessed">建物の評価額（千円）</Label>
             <Input
               id="buildingAssessed"
-              type="number"
-              min={0}
-              step={100}
+              type="text"
               placeholder="6000"
               inputMode="numeric"
-              value={buildingAssessed}
+              value={withThousands(buildingAssessed)}
               onChange={(e) => setBuildingAssessed(sanitizeNumberInput(e.target.value))}
             />
           </div>
@@ -484,12 +480,10 @@ export function PropertyForm({
           <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
           <Input
             id="brokerageFee"
-            type="number"
-            min={0}
-            step={1000}
+            type="text"
             placeholder="330000"
             inputMode="numeric"
-            value={brokerageFee}
+            value={withThousands(brokerageFee)}
             onChange={(e) => setBrokerageFee(sanitizeNumberInput(e.target.value))}
           />
           <p className="mt-1 text-xs text-slate-500">
@@ -570,17 +564,25 @@ export function PropertyForm({
 
         {useLoan ? (
           <div className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="loanBank">借入銀行</Label>
+              <SearchSelect
+                id="loanBank"
+                value={loanBank}
+                onChange={setLoanBank}
+                options={BANKS}
+                placeholder="銀行名で検索（一覧にない場合は直接入力）"
+              />
+            </div>
             <FormRow>
               <div>
                 <Label htmlFor="loanPrincipal">借入元本（千円）</Label>
                 <Input
                   id="loanPrincipal"
-                  type="number"
-                  min={0}
-                  step={100}
+                  type="text"
                   placeholder="25000"
                   inputMode="numeric"
-                  value={loanPrincipal}
+                  value={withThousands(loanPrincipal)}
                   onChange={(e) => setLoanPrincipal(sanitizeNumberInput(e.target.value))}
                 />
               </div>

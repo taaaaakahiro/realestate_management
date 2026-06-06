@@ -32,9 +32,12 @@ export function LoanPanel({ loan }: { loan: Loan }) {
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-900">融資・返済</h2>
-        <span className="text-xs text-slate-500">{loan.method} / 期間 {loan.termMonths / 12}年</span>
+        <span className="text-right text-xs text-slate-500">
+          {loan.bankName && <span className="text-slate-700">{loan.bankName}・</span>}
+          {loan.method} / 期間 {loan.termMonths / 12}年
+        </span>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
