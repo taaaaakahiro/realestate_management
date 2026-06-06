@@ -1,5 +1,7 @@
 # PropFolio
 
+🌐 **公開URL: https://taaaaakahiro.github.io/realestate_management/**
+
 購入時の**原価**に加えて、**日々の支出**・**家賃収入**・**融資（ローン）**を管理し、不動産投資の**回収率**を見える化するアプリです。
 
 > 回収率 = 累計収入 ÷ 取得原価。取得原価をどれだけ家賃で取り戻せたかを表します。
@@ -81,7 +83,7 @@ src/
 
 1. リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に設定
 2. このブランチを `main` にマージ（または Actions タブから `Deploy to GitHub Pages` を手動実行）
-3. `https://<ユーザー名>.github.io/realestate_management/` で公開
+3. https://taaaaakahiro.github.io/realestate_management/ で公開
 
 ローカルで本番ビルドを確認する場合:
 
