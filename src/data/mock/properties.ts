@@ -1,8 +1,30 @@
 import type { Property } from "@/features/property/types";
+import {
+  calcAcquisitionTax,
+  calcPropertyTaxSettlement,
+} from "@/features/simulation/calc";
+
+type SeedProperty = Omit<Property, "realEstateAcquisitionTax" | "propertyTaxSettlement">;
+
+/** 評価額・引き渡し日から税額を自動算出して Property を組み立てる */
+function build(seed: SeedProperty): Property {
+  return {
+    ...seed,
+    realEstateAcquisitionTax: calcAcquisitionTax(
+      seed.landAssessedValue,
+      seed.buildingAssessedValue,
+    ).total,
+    propertyTaxSettlement: calcPropertyTaxSettlement(
+      seed.landAssessedValue,
+      seed.buildingAssessedValue,
+      seed.purchaseDate,
+    ).settlement,
+  };
+}
 
 /** モック物件データ。実DB導入時はこのファイルを差し替えるだけでよい。 */
 export const mockProperties: Property[] = [
-  {
+  build({
     id: "prop-001",
     name: "グランドメゾン新宿",
     status: "owned",
@@ -10,13 +32,15 @@ export const mockProperties: Property[] = [
     address: "東京都新宿区西新宿7-1-1",
     type: "区分マンション",
     purchasePrice: 28_000_000,
-    realEstateAcquisitionTax: 420_000,
-    propertyTaxSettlement: 95_000,
+    landAssessedValue: 8_000_000,
+    buildingAssessedValue: 6_000_000,
+    brokerageFee: 990_000,
+    stampDuty: 20_000,
     purchaseDate: "2023-01-15",
     monthlyRent: 138_000,
     emoji: "🏙️",
-  },
-  {
+  }),
+  build({
     id: "prop-002",
     name: "サンライズ横浜アパート",
     status: "owned",
@@ -24,13 +48,15 @@ export const mockProperties: Property[] = [
     address: "神奈川県横浜市港北区大倉山3-2-5",
     type: "一棟アパート",
     purchasePrice: 62_000_000,
-    realEstateAcquisitionTax: 1_240_000,
-    propertyTaxSettlement: 180_000,
+    landAssessedValue: 22_000_000,
+    buildingAssessedValue: 18_000_000,
+    brokerageFee: 2_046_000,
+    stampDuty: 30_000,
     purchaseDate: "2022-06-01",
     monthlyRent: 520_000,
     emoji: "🏘️",
-  },
-  {
+  }),
+  build({
     id: "prop-003",
     name: "緑が丘戸建て",
     status: "owned",
@@ -38,13 +64,15 @@ export const mockProperties: Property[] = [
     address: "千葉県柏市緑が丘12-4",
     type: "戸建て",
     purchasePrice: 18_500_000,
-    realEstateAcquisitionTax: 280_000,
-    propertyTaxSettlement: 62_000,
+    landAssessedValue: 7_000_000,
+    buildingAssessedValue: 4_000_000,
+    brokerageFee: 665_000,
+    stampDuty: 10_000,
     purchaseDate: "2024-03-20",
     monthlyRent: 105_000,
     emoji: "🏡",
-  },
-  {
+  }),
+  build({
     id: "prop-004",
     name: "（検討中）川崎駅前マンション",
     status: "prospect",
@@ -52,10 +80,12 @@ export const mockProperties: Property[] = [
     address: "神奈川県川崎市川崎区駅前本町",
     type: "区分マンション",
     purchasePrice: 33_000_000,
-    realEstateAcquisitionTax: 500_000,
-    propertyTaxSettlement: 110_000,
+    landAssessedValue: 11_000_000,
+    buildingAssessedValue: 8_000_000,
+    brokerageFee: 330_000,
+    stampDuty: 20_000,
     purchaseDate: "2026-09-01",
     monthlyRent: 152_000,
     emoji: "🏙️",
-  },
+  }),
 ];

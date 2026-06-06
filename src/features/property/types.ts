@@ -31,11 +31,19 @@ export interface Property {
   type: PropertyType;
   /** 物件価格 */
   purchasePrice: number;
-  /** 不動産取得税（取得時の原価に含む） */
+  /** 土地の固定資産税評価額（按分・税額算定に使用） */
+  landAssessedValue: number;
+  /** 建物の固定資産税評価額（按分・税額算定に使用） */
+  buildingAssessedValue: number;
+  /** 仲介手数料（税込） */
+  brokerageFee: number;
+  /** 印紙代 */
+  stampDuty: number;
+  /** 不動産取得税（評価額から自動算出） */
   realEstateAcquisitionTax: number;
-  /** 固定資産税清算金（取得時の原価に含む） */
+  /** 固定資産税清算金（引き渡し予定日から自動算出） */
   propertyTaxSettlement: number;
-  /** 取得日 (ISO 8601) */
+  /** 取得日（取得前は引き渡し予定日）(ISO 8601) */
   purchaseDate: string;
   /** 想定月額家賃 */
   monthlyRent: number;
