@@ -24,6 +24,7 @@ import {
 } from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
 import { formatPercent, formatYen } from "@/shared/lib/format";
+import { isValidDate, sanitizeNumberInput, validateNumber } from "@/shared/lib/validation";
 import {
   Button,
   FormRow,
@@ -84,6 +85,21 @@ export function PropertyForm({
   );
   const [monthlyRent, setMonthlyRent] = useState(
     initialProperty ? String(toSen(initialProperty.monthlyRent)) : "",
+  );
+
+  // 融資（任意）— 値はサニタイズ・検証するため state で管理
+  const [loanPrincipal, setLoanPrincipal] = useState(
+    initialLoan ? String(toSen(initialLoan.principal)) : "",
+  );
+  const [loanStartDate, setLoanStartDate] = useState(initialLoan?.startDate ?? "");
+  const [loanRate, setLoanRate] = useState(
+    initialLoan ? String(initialLoan.ratePeriods[0]?.annualRatePercent ?? "") : "",
+  );
+  const [loanYears, setLoanYears] = useState(
+    initialLoan ? String(initialLoan.termMonths / 12) : "",
+  );
+  const [loanMethod, setLoanMethod] = useState<RepaymentMethod>(
+    initialLoan?.method ?? REPAYMENT_METHODS[0],
   );
 
   const landAssessedYen = sen(landAssessed);
@@ -154,30 +170,75 @@ export function PropertyForm({
     const name = String(fd.get("name") ?? "").trim();
     const type = String(fd.get("type") ?? "") as PropertyType;
 
-    const loanPrincipal = useLoan ? sen(String(fd.get("loanPrincipal") ?? "")) : 0;
-    const loanRate = Number(fd.get("loanRate")) || 0;
-    const loanYears = Number(fd.get("loanYears")) || 0;
-    const loanMethod = String(fd.get("loanMethod") ?? "元利均等") as RepaymentMethod;
-    const loanStartDate = String(fd.get("loanStartDate") ?? "") || purchaseDate;
-
+    // --- バリデーション（文字列・数値・日付を明確にチェック）---
     if (!name) return setError("物件名を入力してください。");
     if (!PROPERTY_TYPES.includes(type)) return setError("物件種別を選択してください。");
-    if (!purchaseDate) return setError("取得日（引き渡し予定日）を入力してください。");
-    if (!(rentYen > 0)) return setError("想定月額家賃は正の数で入力してください。");
-    if (isProspect && !(yieldPct > 0))
-      return setError("目標利回りを入力してください。");
-    if (!(priceYen > 0))
-      return setError(
-        isProspect
-          ? "物件価格が算出できません。利回り・家賃・評価額を確認してください。"
-          : "物件価格は正の数で入力してください。",
-      );
-    if (useLoan && !(loanPrincipal > 0))
-      return setError("融資を利用する場合は借入元本を入力してください。");
-    if (useLoan && !(loanYears > 0))
-      return setError("融資を利用する場合は返済期間（年）を入力してください。");
-    if (useLoan && !loanStartDate)
-      return setError("融資を利用する場合は返済開始日を入力してください。");
+    if (!isValidDate(purchaseDate))
+      return setError("取得日（引き渡し予定日）を正しく入力してください。");
+
+    const rentChk = validateNumber(monthlyRent, { label: "想定月額家賃" });
+    if (typeof rentChk === "string") return setError(rentChk);
+
+    const landChk = validateNumber(landAssessed, {
+      label: "土地の評価額",
+      min: 0,
+      allowZero: true,
+      optional: true,
+    });
+    if (typeof landChk === "string") return setError(landChk);
+    const bldgChk = validateNumber(buildingAssessed, {
+      label: "建物の評価額",
+      min: 0,
+      allowZero: true,
+      optional: true,
+    });
+    if (typeof bldgChk === "string") return setError(bldgChk);
+    const brokChk = validateNumber(brokerageFee, {
+      label: "仲介手数料",
+      min: 0,
+      allowZero: true,
+      optional: true,
+    });
+    if (typeof brokChk === "string") return setError(brokChk);
+
+    if (isProspect) {
+      const yChk = validateNumber(targetYield, { label: "目標利回り", min: 0.01, max: 100 });
+      if (typeof yChk === "string") return setError(yChk);
+      if (!(derivedPrice > 0))
+        return setError("物件価格が算出できません。利回り・家賃・評価額を確認してください。");
+    } else {
+      const pChk = validateNumber(purchasePrice, { label: "物件価格" });
+      if (typeof pChk === "string") return setError(pChk);
+    }
+
+    let loanInput: { principal: number; rate: number; years: number; start: string } | null =
+      null;
+    if (useLoan) {
+      const lpChk = validateNumber(loanPrincipal, { label: "借入元本" });
+      if (typeof lpChk === "string") return setError(lpChk);
+      const lrChk = validateNumber(loanRate, {
+        label: "当初金利",
+        min: 0,
+        max: 30,
+        allowZero: true,
+      });
+      if (typeof lrChk === "string") return setError(lrChk);
+      const lyChk = validateNumber(loanYears, {
+        label: "返済期間",
+        integer: true,
+        min: 1,
+        max: 50,
+      });
+      if (typeof lyChk === "string") return setError(lyChk);
+      if (!isValidDate(loanStartDate))
+        return setError("返済開始日を正しく入力してください。");
+      loanInput = {
+        principal: sen(loanPrincipal),
+        rate: lrChk as number,
+        years: lyChk as number,
+        start: loanStartDate,
+      };
+    }
 
     setError(null);
     setPending(true);
@@ -203,16 +264,16 @@ export function PropertyForm({
     const propertyId = isEdit ? initialProperty!.id : addProperty(fields).id;
     if (isEdit) updateProperty(propertyId, fields);
 
-    if (useLoan && loanPrincipal > 0) {
+    if (useLoan && loanInput) {
       const tail = initialLoan ? initialLoan.ratePeriods.slice(1) : [];
       addLoan({
         propertyId,
-        principal: loanPrincipal,
-        startDate: loanStartDate,
-        termMonths: Math.round(loanYears * 12),
+        principal: loanInput.principal,
+        startDate: loanInput.start,
+        termMonths: Math.round(loanInput.years * 12),
         method: loanMethod,
         ratePeriods: [
-          { from: loanStartDate, annualRatePercent: Math.max(0, loanRate) },
+          { from: loanInput.start, annualRatePercent: loanInput.rate },
           ...tail,
         ],
       });
@@ -322,8 +383,9 @@ export function PropertyForm({
             min={0}
             step={1}
             placeholder="138"
+            inputMode="numeric"
             value={monthlyRent}
-            onChange={(e) => setMonthlyRent(e.target.value)}
+            onChange={(e) => setMonthlyRent(sanitizeNumberInput(e.target.value))}
             required
           />
         </div>
@@ -336,8 +398,9 @@ export function PropertyForm({
               min={0}
               step={0.1}
               placeholder="8.0"
+              inputMode="decimal"
               value={targetYield}
-              onChange={(e) => setTargetYield(e.target.value)}
+              onChange={(e) => setTargetYield(sanitizeNumberInput(e.target.value, { decimal: true }))}
               required
             />
           </div>
@@ -350,8 +413,9 @@ export function PropertyForm({
               min={0}
               step={100}
               placeholder="28000"
+              inputMode="numeric"
               value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
+              onChange={(e) => setPurchasePrice(sanitizeNumberInput(e.target.value))}
               required
             />
           </div>
@@ -397,8 +461,9 @@ export function PropertyForm({
               min={0}
               step={100}
               placeholder="8000"
+              inputMode="numeric"
               value={landAssessed}
-              onChange={(e) => setLandAssessed(e.target.value)}
+              onChange={(e) => setLandAssessed(sanitizeNumberInput(e.target.value))}
             />
           </div>
           <div>
@@ -409,8 +474,9 @@ export function PropertyForm({
               min={0}
               step={100}
               placeholder="6000"
+              inputMode="numeric"
               value={buildingAssessed}
-              onChange={(e) => setBuildingAssessed(e.target.value)}
+              onChange={(e) => setBuildingAssessed(sanitizeNumberInput(e.target.value))}
             />
           </div>
         </FormRow>
@@ -423,8 +489,9 @@ export function PropertyForm({
             min={0}
             step={1000}
             placeholder="330000"
+            inputMode="numeric"
             value={brokerageFee}
-            onChange={(e) => setBrokerageFee(e.target.value)}
+            onChange={(e) => setBrokerageFee(sanitizeNumberInput(e.target.value))}
           />
           <p className="mt-1 text-xs text-slate-500">
             印紙代は物件価格から印紙税法に基づき自動計算します。
@@ -509,21 +576,22 @@ export function PropertyForm({
                 <Label htmlFor="loanPrincipal">借入元本（千円）</Label>
                 <Input
                   id="loanPrincipal"
-                  name="loanPrincipal"
                   type="number"
                   min={0}
                   step={100}
                   placeholder="25000"
-                  defaultValue={initialLoan ? toSen(initialLoan.principal) : undefined}
+                  inputMode="numeric"
+                  value={loanPrincipal}
+                  onChange={(e) => setLoanPrincipal(sanitizeNumberInput(e.target.value))}
                 />
               </div>
               <div>
                 <Label htmlFor="loanStartDate">返済開始日</Label>
                 <Input
                   id="loanStartDate"
-                  name="loanStartDate"
                   type="date"
-                  defaultValue={initialLoan?.startDate}
+                  value={loanStartDate}
+                  onChange={(e) => setLoanStartDate(e.target.value)}
                   required
                 />
               </div>
@@ -533,30 +601,38 @@ export function PropertyForm({
                 <Label htmlFor="loanRate">当初金利（年率 %）</Label>
                 <Input
                   id="loanRate"
-                  name="loanRate"
                   type="number"
                   min={0}
+                  max={30}
                   step={0.01}
                   placeholder="1.80"
-                  defaultValue={initialLoan?.ratePeriods[0]?.annualRatePercent}
+                  inputMode="decimal"
+                  value={loanRate}
+                  onChange={(e) => setLoanRate(sanitizeNumberInput(e.target.value, { decimal: true }))}
                 />
               </div>
               <div>
                 <Label htmlFor="loanYears">返済期間（年）</Label>
                 <Input
                   id="loanYears"
-                  name="loanYears"
                   type="number"
-                  min={0}
+                  min={1}
+                  max={50}
                   step={1}
                   placeholder="35"
-                  defaultValue={initialLoan ? initialLoan.termMonths / 12 : undefined}
+                  inputMode="numeric"
+                  value={loanYears}
+                  onChange={(e) => setLoanYears(sanitizeNumberInput(e.target.value))}
                 />
               </div>
             </FormRow>
             <div>
               <Label htmlFor="loanMethod">返済方式</Label>
-              <Select id="loanMethod" name="loanMethod" defaultValue={initialLoan?.method ?? REPAYMENT_METHODS[0]}>
+              <Select
+                id="loanMethod"
+                value={loanMethod}
+                onChange={(e) => setLoanMethod(e.target.value as RepaymentMethod)}
+              >
                 {REPAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {m}
