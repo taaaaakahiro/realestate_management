@@ -29,9 +29,9 @@ jobs:
           node-version: 22
           cache: npm
 
-      # npm install を使う（npm ci だと OS 別のネイティブ依存
-      # lightningcss/@tailwindcss/oxide の linux バイナリが入らない既知問題の回避）
-      - run: npm install
+      # macOS 生成の lockfile には linux 用 optional 依存（lightningcss/@tailwindcss/oxide）が
+      # 含まれず CI で解決されないため、lockfile を破棄して当該OS向けに新規インストールする
+      - run: rm -f package-lock.json && npm install
 
       - name: Build (Vite)
         run: npm run build
