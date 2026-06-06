@@ -132,7 +132,7 @@ export function PropertyDetailView() {
             ＋ この物件に収支を登録
           </Link>
         </div>
-        <TransactionTable transactions={propertyTxns} limit={30} />
+        <TransactionTable transactions={propertyTxns} />
       </section>
     </div>
   );

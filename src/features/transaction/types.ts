@@ -10,8 +10,7 @@ export type ExpenseCategory =
   | "固定資産税"
   | "不動産取得税"
   | "管理費"
-  | "ローン元本"
-  | "ローン利息"
+  | "ローン返済"
   | "その他支出";
 
 export type TransactionCategory = IncomeCategory | ExpenseCategory;
@@ -24,7 +23,7 @@ export const INCOME_CATEGORIES: IncomeCategory[] = [
 ];
 /**
  * 手動登録できる支出科目。
- * ローン元本・ローン利息は融資モデルから自動計上するため、ここには含めない。
+ * ローン返済は融資モデルから自動計上（元本・利息に内訳分解）するため、ここには含めない。
  */
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "広告料",
@@ -45,4 +44,6 @@ export interface Transaction {
   category: TransactionCategory;
   amount: number;
   memo?: string;
+  /** ローン返済の内訳（元本・利息）。返済取引のみ持つ。 */
+  breakdown?: { principal: number; interest: number };
 }
