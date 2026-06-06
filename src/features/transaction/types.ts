@@ -23,7 +23,7 @@ export const INCOME_CATEGORIES: IncomeCategory[] = [
 ];
 /**
  * 手動登録できる支出科目。
- * ローン返済は融資モデルから自動計上（元本・利息に内訳分解）するため、ここには含めない。
+ * 「ローン返済」を選ぶと、返済額から元本・利息へ自動分解して計上する。
  */
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "広告料",
@@ -32,6 +32,7 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "固定資産税",
   "不動産取得税",
   "管理費",
+  "ローン返済",
   "その他支出",
 ];
 

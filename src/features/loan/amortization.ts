@@ -105,6 +105,22 @@ export function loanTransactions(loan: Loan, untilISO: string): Transaction[] {
   return txns;
 }
 
+/**
+ * 指定日に入力された返済額を、元本・利息に分解する。
+ * 利息はその月の残高×金利（返済スケジュール基準）から求め、元本 = 返済額 − 利息。
+ */
+export function splitPayment(
+  loan: Loan,
+  dateISO: string,
+  payment: number,
+): { principal: number; interest: number } {
+  const target = ym(monthStart(dateISO));
+  const row = buildSchedule(loan).find((r) => r.month === target);
+  const pay = Math.round(payment);
+  const interest = Math.min(row ? row.interest : 0, pay);
+  return { principal: pay - interest, interest };
+}
+
 export interface LoanSummary {
   principal: number;
   principalPaid: number;

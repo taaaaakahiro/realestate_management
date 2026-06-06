@@ -10,7 +10,9 @@ import {
   type TransactionKind,
 } from "@/features/transaction/types";
 import { iconForType } from "@/features/property/types";
+import { splitPayment } from "@/features/loan/amortization";
 import { addTransaction, useStore } from "@/data/store";
+import { formatYen } from "@/shared/lib/format";
 import {
   Button,
   FormRow,
@@ -22,12 +24,26 @@ import {
 
 export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: string }) {
   const router = useRouter();
-  const { properties } = useStore();
+  const { properties, loans } = useStore();
+
+  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
   const [kind, setKind] = useState<TransactionKind>("income");
+  const [category, setCategory] = useState<TransactionCategory>("家賃");
+  const [date, setDate] = useState("");
+  const [amount, setAmount] = useState("");
+  const [memo, setMemo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const categories = kind === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const isLoanRepayment = kind === "expense" && category === "ローン返済";
+  const loan = loans.find((l) => l.propertyId === propertyId);
+
+  // ローン返済の内訳プレビュー
+  const preview =
+    isLoanRepayment && loan && Number(amount) > 0 && date
+      ? splitPayment(loan, date, Number(amount))
+      : null;
 
   if (properties.length === 0) {
     return (
@@ -41,19 +57,27 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
     );
   }
 
+  function changeKind(next: TransactionKind) {
+    setKind(next);
+    setCategory(next === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-
-    const propertyId = String(fd.get("propertyId") ?? "");
-    const category = String(fd.get("category") ?? "") as TransactionCategory;
-    const date = String(fd.get("date") ?? "");
-    const amount = Number(fd.get("amount"));
-    const memo = String(fd.get("memo") ?? "").trim();
+    const amt = Number(amount);
 
     if (!propertyId) return setError("物件を選択してください。");
     if (!date) return setError("計上日を入力してください。");
-    if (!(amount > 0)) return setError("金額は正の数で入力してください。");
+    if (!(amt > 0)) return setError("金額は正の数で入力してください。");
+
+    let breakdown: { principal: number; interest: number } | undefined;
+    if (isLoanRepayment) {
+      if (!loan)
+        return setError(
+          "この物件には融資が登録されていません。物件登録時に融資を設定してください。",
+        );
+      breakdown = splitPayment(loan, date, amt);
+    }
 
     setError(null);
     setPending(true);
@@ -62,8 +86,9 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
       kind,
       category,
       date,
-      amount,
-      memo: memo || undefined,
+      amount: amt,
+      memo: memo.trim() || undefined,
+      breakdown,
     });
     router.push(`/properties/detail?id=${propertyId}`);
   }
@@ -74,8 +99,8 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         <Label htmlFor="propertyId">対象物件</Label>
         <Select
           id="propertyId"
-          name="propertyId"
-          defaultValue={defaultPropertyId ?? properties[0]?.id}
+          value={propertyId}
+          onChange={(e) => setPropertyId(e.target.value)}
           required
         >
           {properties.map((p) => (
@@ -91,9 +116,8 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
           <Label htmlFor="kind">区分</Label>
           <Select
             id="kind"
-            name="kind"
             value={kind}
-            onChange={(e) => setKind(e.target.value as TransactionKind)}
+            onChange={(e) => changeKind(e.target.value as TransactionKind)}
           >
             <option value="income">収入</option>
             <option value="expense">支出</option>
@@ -101,7 +125,11 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         </div>
         <div>
           <Label htmlFor="category">科目</Label>
-          <Select id="category" name="category" key={kind} defaultValue={categories[0]}>
+          <Select
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as TransactionCategory)}
+          >
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -114,25 +142,55 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
       <FormRow>
         <div>
           <Label htmlFor="date">計上日</Label>
-          <Input id="date" name="date" type="date" required />
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
         </div>
         <div>
-          <Label htmlFor="amount">金額（円）</Label>
+          <Label htmlFor="amount">{isLoanRepayment ? "返済額（円）" : "金額（円）"}</Label>
           <Input
             id="amount"
-            name="amount"
             type="number"
             min={0}
             step={1000}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             placeholder="138000"
             required
           />
         </div>
       </FormRow>
 
+      {/* ローン返済の内訳プレビュー */}
+      {isLoanRepayment && (
+        <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+          {!loan ? (
+            <span className="text-rose-600">この物件には融資が登録されていません。</span>
+          ) : preview ? (
+            <span className="text-slate-700">
+              内訳 → 元本 <strong className="tabular-nums">{formatYen(preview.principal)}</strong>
+              <span className="text-slate-300"> ・ </span>
+              利息 <strong className="tabular-nums">{formatYen(preview.interest)}</strong>
+            </span>
+          ) : (
+            <span className="text-slate-500">計上日と返済額を入力すると内訳を表示します。</span>
+          )}
+        </div>
+      )}
+
       <div>
         <Label htmlFor="memo">メモ（任意）</Label>
-        <Textarea id="memo" name="memo" rows={2} placeholder="例: エアコン交換" />
+        <Textarea
+          id="memo"
+          rows={2}
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          placeholder="例: エアコン交換"
+        />
       </div>
 
       {error && (
