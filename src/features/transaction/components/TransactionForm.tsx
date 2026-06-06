@@ -12,7 +12,7 @@ import {
 import { iconForType } from "@/features/property/types";
 import { splitPayment } from "@/features/loan/amortization";
 import { addTransaction, useStore } from "@/data/store";
-import { formatYen } from "@/shared/lib/format";
+import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
   Button,
   FormRow,
@@ -76,7 +76,8 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         return setError(
           "この物件には融資が登録されていません。物件登録時に融資を設定してください。",
         );
-      breakdown = splitPayment(loan, date, amt);
+      const split = splitPayment(loan, date, amt);
+      breakdown = { principal: split.principal, interest: split.interest };
     }
 
     setError(null);
@@ -165,17 +166,32 @@ export function TransactionForm({ defaultPropertyId }: { defaultPropertyId?: str
         </div>
       </FormRow>
 
-      {/* ローン返済の内訳プレビュー */}
+      {/* ローン返済の内訳プレビュー（適用金利を考慮して自動分解） */}
       {isLoanRepayment && (
-        <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
           {!loan ? (
             <span className="text-rose-600">この物件には融資が登録されていません。</span>
           ) : preview ? (
-            <span className="text-slate-700">
-              内訳 → 元本 <strong className="tabular-nums">{formatYen(preview.principal)}</strong>
-              <span className="text-slate-300"> ・ </span>
-              利息 <strong className="tabular-nums">{formatYen(preview.interest)}</strong>
-            </span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>適用金利 {formatPercent(preview.ratePercent, 2)}（年率）</span>
+                <span>返済前残高 {formatYen(preview.balanceBefore)}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-slate-700">
+                  元本{" "}
+                  <strong className="tabular-nums text-slate-900">
+                    {formatYen(preview.principal)}
+                  </strong>
+                </span>
+                <span className="text-slate-700">
+                  利息{" "}
+                  <strong className="tabular-nums text-rose-600">
+                    {formatYen(preview.interest)}
+                  </strong>
+                </span>
+              </div>
+            </div>
           ) : (
             <span className="text-slate-500">計上日と返済額を入力すると内訳を表示します。</span>
           )}
