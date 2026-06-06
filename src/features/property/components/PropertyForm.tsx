@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  acquisitionCost,
   iconForType,
   PROPERTY_STATUSES,
   PROPERTY_TYPES,
@@ -14,7 +15,13 @@ import {
 } from "@/features/property/types";
 import { lookupAddressByZip, normalizeZip } from "@/shared/lib/zipcode";
 import { REPAYMENT_METHODS, type Loan, type RepaymentMethod } from "@/features/loan/types";
-import { calcStampDuty, DEFAULT_BROKERAGE_FEE, simulate } from "@/features/simulation/calc";
+import {
+  calcAcquisitionTax,
+  calcPropertyTaxSettlement,
+  calcStampDuty,
+  DEFAULT_BROKERAGE_FEE,
+  simulate,
+} from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
 import { formatPercent, formatYen } from "@/shared/lib/format";
 import {
@@ -47,6 +54,16 @@ export function PropertyForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [useLoan, setUseLoan] = useState(!!initialLoan);
+  const [status, setStatus] = useState<PropertyStatus>(initialProperty?.status ?? "owned");
+
+  // 取得前は「想定家賃＋利回り」から物件価格を逆算する初期利回り
+  const initialYield =
+    initialProperty && acquisitionCost(initialProperty) > 0
+      ? ((initialProperty.monthlyRent * 12) / acquisitionCost(initialProperty)) * 100
+      : 8;
+  const [targetYield, setTargetYield] = useState(
+    initialProperty?.status === "prospect" ? initialYield.toFixed(2) : "8",
+  );
 
   // 金額・シミュレーション系は live 計算のため state で管理（千円/円）
   const [purchaseDate, setPurchaseDate] = useState(initialProperty?.purchaseDate ?? "");
@@ -66,10 +83,30 @@ export function PropertyForm({
     initialProperty ? String(toSen(initialProperty.monthlyRent)) : "",
   );
 
-  const priceYen = sen(purchasePrice);
   const landAssessedYen = sen(landAssessed);
   const buildingAssessedYen = sen(buildingAssessed);
   const rentYen = sen(monthlyRent);
+  const isProspect = status === "prospect";
+
+  // 取得時の経費（取得原価に含む）＝ 不動産取得税 ＋ 固定資産税精算金（評価額・引き渡し日から算出。価格に依存しない）
+  const acqTax = calcAcquisitionTax(landAssessedYen, buildingAssessedYen).total;
+  const settlement = calcPropertyTaxSettlement(
+    landAssessedYen,
+    buildingAssessedYen,
+    purchaseDate,
+  ).settlement;
+  const acquisitionExpense = acqTax + settlement;
+
+  // 取得前: 想定家賃と目標利回りから取得原価を算出し、経費を引いて物件価格を逆算
+  const yieldPct = Number(targetYield) || 0;
+  const targetAcqCost =
+    isProspect && yieldPct > 0 ? Math.round((rentYen * 12) / (yieldPct / 100)) : 0;
+  const derivedPrice = Math.max(
+    0,
+    Math.floor((targetAcqCost - acquisitionExpense) / 1000) * 1000,
+  );
+
+  const priceYen = isProspect ? derivedPrice : sen(purchasePrice);
 
   const sim = simulate({
     purchasePrice: priceYen,
@@ -104,7 +141,6 @@ export function PropertyForm({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get("name") ?? "").trim();
-    const status = String(fd.get("status") ?? "owned") as PropertyStatus;
     const type = String(fd.get("type") ?? "") as PropertyType;
 
     const loanPrincipal = useLoan ? sen(String(fd.get("loanPrincipal") ?? "")) : 0;
@@ -116,8 +152,15 @@ export function PropertyForm({
     if (!name) return setError("物件名を入力してください。");
     if (!PROPERTY_TYPES.includes(type)) return setError("物件種別を選択してください。");
     if (!purchaseDate) return setError("取得日（引き渡し予定日）を入力してください。");
-    if (!(priceYen > 0)) return setError("物件価格は正の数で入力してください。");
     if (!(rentYen > 0)) return setError("想定月額家賃は正の数で入力してください。");
+    if (isProspect && !(yieldPct > 0))
+      return setError("目標利回りを入力してください。");
+    if (!(priceYen > 0))
+      return setError(
+        isProspect
+          ? "物件価格が算出できません。利回り・家賃・評価額を確認してください。"
+          : "物件価格は正の数で入力してください。",
+      );
     if (useLoan && !(loanPrincipal > 0))
       return setError("融資を利用する場合は借入元本を入力してください。");
     if (useLoan && !(loanYears > 0))
@@ -184,7 +227,11 @@ export function PropertyForm({
 
       <div>
         <Label htmlFor="status">状態</Label>
-        <Select id="status" name="status" defaultValue={initialProperty?.status ?? "owned"}>
+        <Select
+          id="status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as PropertyStatus)}
+        >
           {PROPERTY_STATUSES.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
@@ -192,7 +239,9 @@ export function PropertyForm({
           ))}
         </Select>
         <p className="mt-1 text-xs text-slate-500">
-          「取得前」はポートフォリオ（回収率集計）に含まれません。取得後に「保有中」へ切り替えできます。
+          {isProspect
+            ? "「取得前」は想定家賃と目標利回りから物件価格を逆算します（ポートフォリオには含まれません）。"
+            : "ポートフォリオ（回収率集計）の対象です。"}
         </p>
       </div>
 
@@ -255,19 +304,6 @@ export function PropertyForm({
 
       <FormRow>
         <div>
-          <Label htmlFor="purchasePrice">物件価格（千円）</Label>
-          <Input
-            id="purchasePrice"
-            type="number"
-            min={0}
-            step={100}
-            placeholder="28000"
-            value={purchasePrice}
-            onChange={(e) => setPurchasePrice(e.target.value)}
-            required
-          />
-        </div>
-        <div>
           <Label htmlFor="monthlyRent">想定月額家賃（千円）</Label>
           <Input
             id="monthlyRent"
@@ -280,7 +316,58 @@ export function PropertyForm({
             required
           />
         </div>
+        {isProspect ? (
+          <div>
+            <Label htmlFor="targetYield">目標利回り（取得原価ベース %）</Label>
+            <Input
+              id="targetYield"
+              type="number"
+              min={0}
+              step={0.1}
+              placeholder="8.0"
+              value={targetYield}
+              onChange={(e) => setTargetYield(e.target.value)}
+              required
+            />
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="purchasePrice">物件価格（千円）</Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              min={0}
+              step={100}
+              placeholder="28000"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              required
+            />
+          </div>
+        )}
       </FormRow>
+
+      {isProspect && (
+        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-sm">
+          <p className="mb-1 text-xs text-slate-500">
+            想定家賃と目標利回りから取得原価を算出し、経費（取得税＋精算金）を引いて物件価格を逆算します。
+          </p>
+          <div className="flex justify-between">
+            <span className="text-slate-500">取得原価（家賃 ÷ 利回り）</span>
+            <span className="tabular-nums text-slate-800">{formatYen(targetAcqCost)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">− 経費（不動産取得税＋固定資産税精算金）</span>
+            <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
+          </div>
+          <div className="mt-1 flex justify-between border-t border-indigo-100 pt-1">
+            <span className="font-medium text-slate-700">= 逆算した物件価格</span>
+            <span className="tabular-nums font-bold text-indigo-700">
+              {formatYen(derivedPrice)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 取得シミュレーション（評価額・引き渡し日から自動計算） */}
       <fieldset className="space-y-4 rounded-xl border border-slate-200 p-4">
