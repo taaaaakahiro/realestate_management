@@ -10,7 +10,7 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
 
   return (
     <Link
-      href={`/properties/${p.id}`}
+      href={`/properties/detail?id=${p.id}`}
       className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">

@@ -1,20 +1,20 @@
+"use client";
+
 import { analyzeProperty, summarizePortfolio } from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
-import { getPropertyRepository } from "@/features/property/repository";
-import { getTransactionRepository } from "@/features/transaction/repository";
+import { useStore } from "@/data/store";
 
-export default async function DashboardPage() {
-  const properties = await getPropertyRepository().findAll();
-  const txnRepo = getTransactionRepository();
+export default function DashboardPage() {
+  const { properties, transactions } = useStore();
 
-  const analytics = await Promise.all(
-    properties.map(async (p) =>
-      analyzeProperty(p, await txnRepo.findByPropertyId(p.id)),
+  const analytics = properties.map((p) =>
+    analyzeProperty(
+      p,
+      transactions.filter((t) => t.propertyId === p.id),
     ),
   );
   const summary = summarizePortfolio(analytics);
-
   const ranked = [...analytics].sort((a, b) => b.recoveryRate - a.recoveryRate);
 
   return (

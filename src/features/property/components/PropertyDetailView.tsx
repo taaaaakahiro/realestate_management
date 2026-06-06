@@ -1,31 +1,39 @@
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   analyzeProperty,
   buildCumulativeSeries,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
 import { formatPostalCode } from "@/features/property/types";
-import { getPropertyRepository } from "@/features/property/repository";
-import { getTransactionRepository } from "@/features/transaction/repository";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
 import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
+import { useStore } from "@/data/store";
 
-export default async function PropertyDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const property = await getPropertyRepository().findById(id);
-  if (!property) notFound();
+export function PropertyDetailView() {
+  const id = useSearchParams().get("id");
+  const { properties, transactions } = useStore();
+  const property = properties.find((p) => p.id === id);
 
-  const transactions = await getTransactionRepository().findByPropertyId(id);
-  const a = analyzeProperty(property, transactions);
-  const series = buildCumulativeSeries(property, transactions);
+  if (!property) {
+    return (
+      <div className="space-y-4">
+        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+          ← 物件一覧へ戻る
+        </Link>
+        <p className="text-sm text-slate-500">物件が見つかりませんでした。</p>
+      </div>
+    );
+  }
+
+  const propertyTxns = transactions.filter((t) => t.propertyId === property.id);
+  const a = analyzeProperty(property, propertyTxns);
+  const series = buildCumulativeSeries(property, propertyTxns);
   const profit = a.netProfit >= 0;
 
   return (
@@ -58,9 +66,7 @@ export default async function PropertyDetailPage({
           </div>
           <div className="text-right text-sm text-slate-500">
             累計損益{" "}
-            <span
-              className={`font-bold ${profit ? "text-emerald-600" : "text-rose-600"}`}
-            >
+            <span className={`font-bold ${profit ? "text-emerald-600" : "text-rose-600"}`}>
               {profit ? "+" : "−"}
               {formatYen(Math.abs(a.netProfit))}
             </span>
@@ -119,7 +125,7 @@ export default async function PropertyDetailPage({
             ＋ この物件に収支を登録
           </Link>
         </div>
-        <TransactionTable transactions={transactions} limit={30} />
+        <TransactionTable transactions={propertyTxns} limit={30} />
       </section>
     </div>
   );
