@@ -99,6 +99,27 @@ export function addProperty(input: Omit<Property, "id">): Property {
   return property;
 }
 
+/** 物件情報を更新する */
+export function updateProperty(id: string, patch: Partial<Omit<Property, "id">>): void {
+  state = {
+    ...state,
+    properties: state.properties.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+  };
+  persist();
+  emit();
+}
+
+/** 物件と、それに紐づく取引・融資をまとめて削除する */
+export function deleteProperty(id: string): void {
+  state = {
+    properties: state.properties.filter((p) => p.id !== id),
+    transactions: state.transactions.filter((t) => t.propertyId !== id),
+    loans: state.loans.filter((l) => l.propertyId !== id),
+  };
+  persist();
+  emit();
+}
+
 export function addTransaction(input: Omit<Transaction, "id">): Transaction {
   const transaction: Transaction = { id: genId("txn"), ...input };
   state = { ...state, transactions: [...state.transactions, transaction] };
@@ -114,6 +135,13 @@ export function addLoan(loan: Loan): Loan {
   persist();
   emit();
   return loan;
+}
+
+/** 物件に紐づく融資を削除する */
+export function removeLoan(propertyId: string): void {
+  state = { ...state, loans: state.loans.filter((l) => l.propertyId !== propertyId) };
+  persist();
+  emit();
 }
 
 /** 既存融資に金利変更（適用開始日付き）を追加する */

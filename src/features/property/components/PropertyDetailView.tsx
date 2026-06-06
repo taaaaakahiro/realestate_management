@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   analyzeProperty,
   buildCumulativeSeries,
@@ -13,12 +13,14 @@ import { propertyTransactions } from "@/features/loan/service";
 import { TransactionTable } from "@/features/transaction/components/TransactionTable";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
+import { Button } from "@/shared/components/ui/Field";
 import { ProgressBar } from "@/shared/components/ui/ProgressBar";
 import { formatMan, formatPercent, formatYen } from "@/shared/lib/format";
 import { TODAY_ISO } from "@/shared/lib/clock";
-import { useStore } from "@/data/store";
+import { deleteProperty, useStore } from "@/data/store";
 
 export function PropertyDetailView() {
+  const router = useRouter();
   const id = useSearchParams().get("id");
   const { properties, transactions, loans } = useStore();
   const property = properties.find((p) => p.id === id);
@@ -34,6 +36,13 @@ export function PropertyDetailView() {
     );
   }
 
+  function handleDelete() {
+    if (confirm(`「${property!.name}」を削除します。\n関連する取引・融資も削除されます。よろしいですか？`)) {
+      deleteProperty(property!.id);
+      router.push("/properties");
+    }
+  }
+
   const loan = loans.find((l) => l.propertyId === property.id);
   const propertyTxns = propertyTransactions(property.id, transactions, loans, TODAY_ISO);
   const a = analyzeProperty(property, propertyTxns);
@@ -46,7 +55,7 @@ export function PropertyDetailView() {
         <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
           ← 物件一覧へ戻る
         </Link>
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="text-4xl">{property.emoji}</span>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{property.name}</h1>
@@ -56,6 +65,20 @@ export function PropertyDetailView() {
             </p>
           </div>
           <Badge tone="neutral">{property.type}</Badge>
+          <div className="ml-auto flex gap-2">
+            <Link href={`/properties/edit?id=${property.id}`}>
+              <Button type="button" variant="ghost">
+                編集
+              </Button>
+            </Link>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+            >
+              削除
+            </button>
+          </div>
         </div>
       </div>
 
