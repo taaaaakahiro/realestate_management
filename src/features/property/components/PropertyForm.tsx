@@ -19,6 +19,7 @@ import { SearchSelect } from "@/shared/components/ui/SearchSelect";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
+  calcRegistrationFee,
   calcStampDuty,
   DEFAULT_BROKERAGE_FEE,
   simulate,
@@ -120,7 +121,9 @@ export function PropertyForm({
     purchaseDate,
   ).settlement;
   const brokerageYen = yen(brokerageFee);
-  const fixedExpense = acqTax + settlement + brokerageYen;
+  const registrationFee = calcRegistrationFee(landAssessedYen, buildingAssessedYen).total;
+  // 登記費用は取得原価に含む。逆算では物件価格を求めるための差引経費に加える。
+  const fixedExpense = acqTax + settlement + registrationFee + brokerageYen;
 
   // 取得前: 想定家賃と目標利回りから投資総額を算出し、経費を引いて物件価格を逆算
   const yieldPct = Number(targetYield) || 0;
@@ -274,6 +277,7 @@ export function PropertyForm({
       stampDuty: calcStampDuty(priceYen),
       realEstateAcquisitionTax: sim.acquisitionTax.total,
       propertyTaxSettlement: sim.settlement.settlement,
+      registrationFee: sim.registrationFee.total,
       purchaseDate,
       monthlyRent: rentYen,
       emoji: iconForType(type),
@@ -441,7 +445,7 @@ export function PropertyForm({
       {isProspect && (
         <div className="rounded-lg border border-green-100 bg-green-50/50 p-3 text-sm">
           <p className="mb-1 text-xs text-slate-500">
-            想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
+            想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋登記費用＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
           </p>
           <div className="flex justify-between">
             <span className="text-slate-500">投資総額（家賃 ÷ 利回り）</span>
@@ -449,7 +453,7 @@ export function PropertyForm({
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">
-              − 経費（取得税＋精算金＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
+              − 経費（取得税＋精算金＋登記{formatYen(registrationFee)}＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
             </span>
             <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
           </div>
@@ -533,6 +537,19 @@ export function PropertyForm({
               </span>
               <span className="tabular-nums text-slate-800">
                 {formatYen(sim.settlement.settlement)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">
+                登記費用（自動・登録免許税＋司法書士報酬）
+              </span>
+              <span className="tabular-nums text-slate-800">
+                {formatYen(sim.registrationFee.total)}
+                <span className="ml-1 text-xs text-slate-400">
+                  （登免 土地 {formatYen(sim.registrationFee.landTax)}・建物{" "}
+                  {formatYen(sim.registrationFee.buildingTax)}＋報酬{" "}
+                  {formatYen(sim.registrationFee.scrivenerFee)}）
+                </span>
               </span>
             </div>
             <div className="flex justify-between">

@@ -59,7 +59,7 @@ export function App() {
             <span className="font-semibold brand-text">PropFolio</span> by Maa&apos;un Japan
           </span>
         </div>
-        <p className="mt-1">モックデータで動作するデモ ・ © 2026 Maa&apos;un Japan</p>
+        <p className="mt-1">© 2026 Maa&apos;un Japan</p>
       </footer>
     </div>
   );

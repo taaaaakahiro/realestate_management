@@ -303,7 +303,8 @@ export function PropertyDetailView() {
               <p className="mt-1 text-xs text-slate-500">
                 物件 {formatMan(property.purchasePrice)} + 不動産取得税{" "}
                 {formatMan(property.realEstateAcquisitionTax)} + 固定資産税清算金{" "}
-                {formatMan(property.propertyTaxSettlement)}
+                {formatMan(property.propertyTaxSettlement)} + 登記費用{" "}
+                {formatMan(property.registrationFee ?? 0)}
               </p>
             </Card>
             <Card>

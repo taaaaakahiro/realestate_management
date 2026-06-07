@@ -71,9 +71,17 @@ export function SimulationPanel({ property: p }: { property: Property }) {
             value={formatYen(sim.settlement.settlement)}
             sub={`年税額 ${formatYen(sim.settlement.annual)}・${sim.settlement.remainingDays}/${sim.settlement.totalDays}日`}
           />
+          <Row
+            label="登記費用（登録免許税＋司法書士報酬）"
+            value={formatYen(sim.registrationFee.total)}
+            sub={`登免 土地 ${formatYen(sim.registrationFee.landTax)}・建物 ${formatYen(sim.registrationFee.buildingTax)}＋報酬 ${formatYen(sim.registrationFee.scrivenerFee)}`}
+          />
           <Row label="仲介手数料（税込）" value={formatYen(sim.brokerageFee)} />
           <Row label="印紙代" value={formatYen(sim.stampDuty)} />
-          <Row label="取得原価（価格＋取得税＋精算金）" value={formatYen(sim.acquisitionCost)} />
+          <Row
+            label="取得原価（価格＋取得税＋精算金＋登記費用）"
+            value={formatYen(sim.acquisitionCost)}
+          />
         </div>
       </Card>
     </div>
