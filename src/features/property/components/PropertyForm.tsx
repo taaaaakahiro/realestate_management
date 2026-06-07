@@ -389,7 +389,7 @@ export function PropertyForm({
       <FormRow>
         <div>
           <Label htmlFor="type">物件種別</Label>
-          <Select id="type" name="type" defaultValue={initialProperty?.type ?? PROPERTY_TYPES[0]}>
+          <Select id="type" name="type" defaultValue={initialProperty?.type ?? "戸建て"}>
             {PROPERTY_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -525,7 +525,7 @@ export function PropertyForm({
             <Input
               id="registrationFee"
               type="text"
-              placeholder="350000"
+              placeholder="100000"
               inputMode="numeric"
               value={withThousands(registrationFee)}
               onChange={(e) => setRegistrationFee(sanitizeNumberInput(e.target.value))}
