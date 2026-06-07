@@ -19,7 +19,7 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
   return (
     <Link
       href={`/properties/detail?id=${p.id}`}
-      className="block rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50"
+      className="block rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-green-300 hover:shadow-lg hover:shadow-green-100/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
         <>
           <div className="mt-4 flex items-end justify-between">
             <span className="text-sm text-slate-500">回収率</span>
-            <span className="text-2xl font-bold tabular-nums text-indigo-600">
+            <span className="text-2xl font-bold tabular-nums text-green-700">
               {formatPercent(recoveryRate)}
             </span>
           </div>

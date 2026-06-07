@@ -6,7 +6,7 @@ export function NewProperty() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/properties" className="text-sm text-green-700 hover:underline">
           ← 物件一覧へ戻る
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-slate-900">物件を登録</h1>

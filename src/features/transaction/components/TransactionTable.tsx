@@ -178,7 +178,7 @@ export function TransactionTable({
                         <span className="flex justify-end gap-2">
                           <Link
                             href={`/transactions/edit?id=${t.id}`}
-                            className="text-indigo-600 hover:underline"
+                            className="text-green-700 hover:underline"
                           >
                             編集
                           </Link>

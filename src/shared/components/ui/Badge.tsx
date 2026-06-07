@@ -6,14 +6,14 @@ const toneClass: Record<Tone, string> = {
   neutral: "bg-slate-100 text-slate-600 ring-slate-200",
   income: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   expense: "bg-rose-50 text-rose-700 ring-rose-200",
-  success: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+  success: "bg-green-50 text-green-700 ring-green-200",
 };
 
 const dotClass: Record<Tone, string> = {
   neutral: "bg-slate-400",
   income: "bg-emerald-500",
   expense: "bg-rose-500",
-  success: "bg-indigo-500",
+  success: "bg-green-500",
 };
 
 export function Badge({

@@ -37,13 +37,13 @@ export function SimulationPanel({ property: p }: { property: Property }) {
         </Card>
         <Card>
           <CardLabel>表面利回り</CardLabel>
-          <CardValue className="text-2xl text-indigo-600">
+          <CardValue className="text-2xl text-green-700">
             {formatPercent(sim.grossYield)}
           </CardValue>
         </Card>
         <Card>
           <CardLabel>実質利回り（概算）</CardLabel>
-          <CardValue className="text-2xl text-indigo-600">
+          <CardValue className="text-2xl text-green-700">
             {formatPercent(sim.netYield)}
           </CardValue>
         </Card>

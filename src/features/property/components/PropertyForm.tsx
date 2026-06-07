@@ -439,7 +439,7 @@ export function PropertyForm({
       </FormRow>
 
       {isProspect && (
-        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-sm">
+        <div className="rounded-lg border border-green-100 bg-green-50/50 p-3 text-sm">
           <p className="mb-1 text-xs text-slate-500">
             想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
           </p>
@@ -453,9 +453,9 @@ export function PropertyForm({
             </span>
             <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
           </div>
-          <div className="mt-1 flex justify-between border-t border-indigo-100 pt-1">
+          <div className="mt-1 flex justify-between border-t border-green-100 pt-1">
             <span className="font-medium text-slate-700">= 逆算した物件価格</span>
-            <span className="tabular-nums font-bold text-indigo-700">
+            <span className="tabular-nums font-bold text-green-700">
               {formatYen(derivedPrice)}
             </span>
           </div>
@@ -554,7 +554,7 @@ export function PropertyForm({
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">表面利回り / 実質利回り（概算）</span>
-              <span className="tabular-nums font-semibold text-indigo-600">
+              <span className="tabular-nums font-semibold text-green-700">
                 {formatPercent(sim.grossYield)} / {formatPercent(sim.netYield)}
               </span>
             </div>
@@ -574,7 +574,7 @@ export function PropertyForm({
             type="checkbox"
             checked={useLoan}
             onChange={(e) => setUseLoan(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+            className="h-4 w-4 rounded border-slate-300 text-green-700 focus:ring-green-200"
           />
           融資を利用する（ローンを組む）
         </label>

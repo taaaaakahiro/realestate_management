@@ -12,7 +12,7 @@ function NotFound() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-500">ページが見つかりませんでした。</p>
-      <Link href="/" className="text-sm text-indigo-600 hover:underline">
+      <Link href="/" className="text-sm text-green-700 hover:underline">
         ← ダッシュボードへ
       </Link>
     </div>

@@ -65,7 +65,7 @@ export function RecoveryForecast({
   const p = recoveryPace(analytics, transactions, untilISO, effective);
 
   let headline: string;
-  let tone = "text-indigo-600";
+  let tone = "text-green-700";
   if (p.remaining === 0) {
     headline = "回収済み";
     tone = "text-emerald-600";

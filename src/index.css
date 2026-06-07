@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7fb;
+  --background: #f5f8f3;
   --foreground: #0f172a;
-  --brand-from: #4f46e5;
-  --brand-to: #7c3aed;
+  /* マーウンのイメージカラー（緑・黄緑）。白文字が乗る面は読みやすい濃いめに */
+  --brand-from: #15803d; /* green-700 */
+  --brand-to: #4d7c0f; /* lime-700：黄緑（白文字でも可読） */
 }
 
 @theme inline {
@@ -19,8 +20,8 @@ body {
   -webkit-font-smoothing: antialiased;
   /* 柔らかな背景グラデーション */
   background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(124, 58, 237, 0.06), transparent 60%),
-    radial-gradient(1000px 500px at -10% 0%, rgba(79, 70, 229, 0.06), transparent 55%),
+    radial-gradient(1200px 600px at 100% -10%, rgba(101, 163, 13, 0.08), transparent 60%),
+    radial-gradient(1000px 500px at -10% 0%, rgba(21, 128, 61, 0.07), transparent 55%),
     var(--background);
   background-attachment: fixed;
 }
@@ -30,10 +31,11 @@ body {
   background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
 }
 .brand-bar {
-  background-image: linear-gradient(to right, #6366f1, #8b5cf6);
+  background-image: linear-gradient(to right, #16a34a, #84cc16);
 }
 .brand-text {
-  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  /* ロゴ文字は白背景上なので鮮やかな緑→黄緑 */
+  background-image: linear-gradient(135deg, #16a34a, #65a30d);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

@@ -65,7 +65,7 @@ export function Properties() {
             className={cn(
               "rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
               filter === f.key
-                ? "border-indigo-600 bg-indigo-600 text-white"
+                ? "border-green-600 bg-green-600 text-white"
                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
             )}
           >
@@ -73,7 +73,7 @@ export function Properties() {
             <span
               className={cn(
                 "ml-1.5 text-xs",
-                filter === f.key ? "text-indigo-100" : "text-slate-400",
+                filter === f.key ? "text-green-100" : "text-slate-400",
               )}
             >
               {counts[f.key]}

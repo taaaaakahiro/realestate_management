@@ -52,7 +52,7 @@ export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?
     return (
       <p className="text-sm text-slate-500">
         先に
-        <Link href="/properties/new" className="text-indigo-600 hover:underline">
+        <Link href="/properties/new" className="text-green-700 hover:underline">
           物件を登録
         </Link>
         してください。
@@ -191,7 +191,7 @@ export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?
         type="button"
         onClick={() => setRows((prev) => (prev.length >= MAX_ROWS ? prev : [...prev, emptyRow()]))}
         disabled={rows.length >= MAX_ROWS}
-        className="text-sm font-semibold text-indigo-600 hover:underline disabled:opacity-40"
+        className="text-sm font-semibold text-green-700 hover:underline disabled:opacity-40"
       >
         ＋ 行を追加（最大{MAX_ROWS}件・現在{rows.length}件）
       </button>

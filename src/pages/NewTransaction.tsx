@@ -12,7 +12,7 @@ export function NewTransaction() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/properties" className="text-sm text-green-700 hover:underline">
           ← 物件一覧へ戻る
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-slate-900">収入・支出を登録</h1>
@@ -32,7 +32,7 @@ export function NewTransaction() {
             onClick={() => setBatch(m.key)}
             className={cn(
               "rounded-md px-3 py-1.5 font-medium transition",
-              batch === m.key ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100",
+              batch === m.key ? "bg-green-600 text-white" : "text-slate-600 hover:bg-slate-100",
             )}
           >
             {m.label}

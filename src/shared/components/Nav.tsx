@@ -42,7 +42,7 @@ export function Nav() {
               className={cn(
                 "rounded-lg px-3 py-1.5 whitespace-nowrap transition",
                 isActive(pathname, l.href)
-                  ? "bg-indigo-50 text-indigo-700"
+                  ? "bg-green-50 text-green-700"
                   : "text-slate-600 hover:bg-slate-100",
               )}
             >
@@ -93,7 +93,7 @@ export function Nav() {
               className={cn(
                 "block rounded-lg px-3 py-2.5 text-sm font-medium transition",
                 isActive(pathname, l.href)
-                  ? "bg-indigo-50 text-indigo-700"
+                  ? "bg-green-50 text-green-700"
                   : "text-slate-700 hover:bg-slate-100",
               )}
             >

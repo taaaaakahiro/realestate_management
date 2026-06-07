@@ -60,7 +60,7 @@ export function TransactionForm({
     return (
       <p className="text-sm text-slate-500">
         先に
-        <Link href="/properties/new" className="text-indigo-600 hover:underline">
+        <Link href="/properties/new" className="text-green-700 hover:underline">
           物件を登録
         </Link>
         してください。

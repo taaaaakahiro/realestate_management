@@ -127,7 +127,7 @@ export function RecoveryChart({ data }: { data: CumulativePoint[] }) {
         </span>
         <span className="ml-auto text-slate-500">
           {formatMonth(point.month + "-01")} 時点 / 回収率{" "}
-          <strong className="text-indigo-600">{point.recoveryRate.toFixed(1)}%</strong>
+          <strong className="text-green-700">{point.recoveryRate.toFixed(1)}%</strong>
         </span>
       </div>
     </div>
