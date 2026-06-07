@@ -4,6 +4,7 @@ import {
   summarizePortfolio,
 } from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
+import { AssetAllocation } from "@/features/analytics/components/AssetAllocation";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
 import { isInPortfolio } from "@/features/property/types";
 import { propertyTransactions } from "@/features/loan/service";
@@ -41,6 +42,8 @@ export function Dashboard() {
       </div>
 
       <PortfolioSummaryCards summary={summary} />
+
+      {analytics.length > 0 && <AssetAllocation analytics={analytics} />}
 
       {soldProps.length > 0 && (
         <Card>
