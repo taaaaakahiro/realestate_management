@@ -27,9 +27,11 @@ export function Nav() {
           onClick={close}
           className="flex shrink-0 items-center gap-2 text-lg font-extrabold whitespace-nowrap tracking-tight"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-xl brand-gradient text-white shadow-sm">
-            🏠
-          </span>
+          <img
+            src={`${import.meta.env.BASE_URL}icon.svg`}
+            alt="PropFolio"
+            className="h-8 w-8 rounded-xl"
+          />
           <span className="brand-text">PropFolio</span>
         </Link>
 
