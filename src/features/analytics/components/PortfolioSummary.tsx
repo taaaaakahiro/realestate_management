@@ -8,7 +8,7 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="brand-gradient relative overflow-hidden rounded-2xl p-5 text-white shadow-md sm:col-span-2 lg:col-span-1">
         <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
-        <p className="text-sm font-medium text-white/80">ポートフォリオ回収率</p>
+        <p className="text-sm font-medium text-white/80">投下資本回収率</p>
         <p className="mt-1 text-3xl font-bold tabular-nums">
           {formatPercent(summary.recoveryRate)}
         </p>
@@ -18,7 +18,9 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
             style={{ width: `${Math.min(summary.recoveryRate, 100)}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-white/80">取得原価に対する累計家賃収入の割合</p>
+        <p className="mt-2 text-xs text-white/80">
+          投下資本（取得原価）に対する累計家賃収入の割合
+        </p>
       </div>
 
       <Card>
@@ -36,6 +38,9 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
         </CardValue>
         <p className="mt-2 text-xs text-slate-500">
           支出累計 <span className="font-semibold text-rose-600">{formatMan(summary.totalExpense)}</span>
+        </p>
+        <p className="mt-1 text-xs text-slate-400">
+          保有中物件の家賃などの収入と、取得後の運営支出（管理費・修繕費・固定資産税・ローン返済など）の累計。取得原価は含みません。
         </p>
       </Card>
 
