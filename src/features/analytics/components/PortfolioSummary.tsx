@@ -18,30 +18,30 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
             style={{ width: `${Math.min(summary.recoveryRate, 100)}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-white/80">
-          投下資本（取得原価）に対する累計家賃収入の割合
-        </p>
+        <p className="mt-2 text-xs text-white/80">累計家賃収入 ÷ 投下資本（取得原価）</p>
       </div>
 
       <Card>
-        <CardLabel>取得原価合計</CardLabel>
+        <CardLabel>投下資本（取得原価）</CardLabel>
         <CardValue>{formatMan(summary.acquisitionCost)}</CardValue>
-        <p className="mt-2 text-xs text-slate-500">
-          物件 {summary.propertyCount} 件・諸費用込み
-        </p>
+        <p className="mt-2 text-xs text-slate-500">保有 {summary.propertyCount} 件・諸費用込み</p>
       </Card>
 
       <Card>
-        <CardLabel>累計収入 / 支出</CardLabel>
-        <CardValue className="text-emerald-600">
-          {formatMan(summary.totalIncome)}
-        </CardValue>
-        <p className="mt-2 text-xs text-slate-500">
-          支出累計 <span className="font-semibold text-rose-600">{formatMan(summary.totalExpense)}</span>
-        </p>
-        <p className="mt-1 text-xs text-slate-400">
-          保有中物件の家賃などの収入と、取得後の運営支出（管理費・修繕費・固定資産税・ローン返済など）の累計。取得原価は含みません。
-        </p>
+        <CardLabel>累計収支（取得後）</CardLabel>
+        <div className="mt-1 flex items-baseline justify-between gap-2">
+          <span className="text-2xl font-bold tabular-nums text-emerald-600">
+            {formatMan(summary.totalIncome)}
+          </span>
+          <span className="text-xs text-slate-400">収入</span>
+        </div>
+        <div className="mt-0.5 flex items-baseline justify-between gap-2">
+          <span className="text-base font-semibold tabular-nums text-rose-600">
+            − {formatMan(summary.totalExpense)}
+          </span>
+          <span className="text-xs text-slate-400">支出</span>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">運営収支のみ・取得原価は含まず</p>
       </Card>
 
       <Card>
@@ -50,9 +50,7 @@ export function PortfolioSummaryCards({ summary }: { summary: PortfolioSummary }
           {profit ? "+" : "−"}
           {formatMan(Math.abs(summary.netProfit))}
         </CardValue>
-        <p className="mt-2 text-xs text-slate-500">
-          収入 − 投資総額（取得原価 + 支出）
-        </p>
+        <p className="mt-2 text-xs text-slate-500">累計収入 − 投資総額（取得原価＋支出）</p>
       </Card>
     </div>
   );
