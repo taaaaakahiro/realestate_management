@@ -15,7 +15,7 @@ export function Label({
 }
 
 const fieldClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(fieldClass, props.className)} />;
@@ -40,10 +40,10 @@ export function Button({
     <button
       {...props}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50",
         variant === "primary"
-          ? "bg-indigo-600 text-white hover:bg-indigo-700"
-          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+          ? "brand-gradient text-white shadow-sm hover:shadow-md hover:brightness-105 active:brightness-95"
+          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400",
         className,
       )}
     />

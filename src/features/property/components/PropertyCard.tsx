@@ -19,18 +19,22 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
   return (
     <Link
       href={`/properties/detail?id=${p.id}`}
-      className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
+      className="block rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{p.emoji}</span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-50 text-2xl ring-1 ring-slate-100">
+            {p.emoji}
+          </span>
           <div>
             <h3 className="font-bold text-slate-900">{p.name}</h3>
             <p className="text-xs text-slate-500">{p.address}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+          <Badge tone={STATUS_TONE[p.status]} dot>
+            {STATUS_LABEL[p.status]}
+          </Badge>
           <Badge tone="neutral">{p.type}</Badge>
         </div>
       </div>
