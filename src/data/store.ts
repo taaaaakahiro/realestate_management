@@ -26,7 +26,7 @@ export interface StoreData {
 }
 
 // スキーマ変更時はバージョンを上げて古い localStorage を無効化する
-const KEY = "realestate-store-v10";
+const KEY = "realestate-store-v11";
 
 /** ビルド時／初回レンダリングで使う不変のシード */
 const SEED: StoreData = {

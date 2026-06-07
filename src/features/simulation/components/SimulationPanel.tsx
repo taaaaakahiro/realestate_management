@@ -25,6 +25,7 @@ export function SimulationPanel({ property: p }: { property: Property }) {
     handoverDate: p.purchaseDate,
     monthlyRent: p.monthlyRent,
     brokerageFee: p.brokerageFee,
+    registrationFee: p.registrationFee ?? 0,
   });
 
   return (
@@ -72,9 +73,8 @@ export function SimulationPanel({ property: p }: { property: Property }) {
             sub={`年税額 ${formatYen(sim.settlement.annual)}・${sim.settlement.remainingDays}/${sim.settlement.totalDays}日`}
           />
           <Row
-            label="登記費用（登録免許税＋司法書士報酬）"
-            value={formatYen(sim.registrationFee.total)}
-            sub={`登免 土地 ${formatYen(sim.registrationFee.landTax)}・建物 ${formatYen(sim.registrationFee.buildingTax)}＋報酬 ${formatYen(sim.registrationFee.scrivenerFee)}`}
+            label="登記費用（登録免許税＋司法書士報酬・手入力）"
+            value={formatYen(sim.registrationFee)}
           />
           <Row label="仲介手数料（税込）" value={formatYen(sim.brokerageFee)} />
           <Row label="印紙代" value={formatYen(sim.stampDuty)} />
