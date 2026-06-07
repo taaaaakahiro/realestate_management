@@ -6,7 +6,7 @@ import type { Transaction, TransactionKind } from "@/features/transaction/types"
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button, Select } from "@/shared/components/ui/Field";
 import { formatDate, formatYen } from "@/shared/lib/format";
-import { deleteTransaction } from "@/data/store";
+import { deleteTransaction, deleteTransactions } from "@/data/store";
 import { downloadTransactionsCsv, printTransactionsPdf } from "@/features/transaction/export";
 
 /** 自動計上（ローン返済）は編集・削除不可。手動登録分のみ操作できる。 */
@@ -27,6 +27,14 @@ export function TransactionTable({
   const [category, setCategory] = useState<string>("all");
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   // 取引が持つ年の一覧（降順）
   const years = useMemo(() => {
@@ -51,6 +59,27 @@ export function TransactionTable({
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = Math.min(page, totalPages);
   const rows = filtered.slice((current - 1) * pageSize, current * pageSize);
+
+  // 一括選択は手動登録（編集可能）の行のみ対象
+  const editableRows = rows.filter(isEditable);
+  const allPageSelected =
+    editableRows.length > 0 && editableRows.every((t) => selected.has(t.id));
+
+  const toggleSelectAllPage = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) editableRows.forEach((t) => next.delete(t.id));
+      else editableRows.forEach((t) => next.add(t.id));
+      return next;
+    });
+
+  const handleBulkDelete = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`選択した${ids.length}件の取引を削除します。よろしいですか？`)) return;
+    deleteTransactions(ids);
+    setSelected(new Set());
+  };
 
   function reset<T>(setter: (v: T) => void, value: T) {
     setter(value);
@@ -125,6 +154,29 @@ export function TransactionTable({
         </div>
       </div>
 
+      {/* 一括削除バー */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm">
+          <span className="font-medium text-rose-700">{selected.size} 件を選択中</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="rounded-lg px-3 py-1.5 text-slate-600 transition hover:bg-white"
+            >
+              選択解除
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              className="rounded-lg bg-rose-600 px-3 py-1.5 font-semibold text-white transition hover:bg-rose-700"
+            >
+              選択を削除
+            </button>
+          </div>
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <p className="text-sm text-slate-500">該当する取引はありません。</p>
       ) : (
@@ -132,6 +184,16 @@ export function TransactionTable({
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
+                <th className="px-4 py-2.5">
+                  <input
+                    type="checkbox"
+                    aria-label="表示中の取引をすべて選択"
+                    checked={allPageSelected}
+                    disabled={editableRows.length === 0}
+                    onChange={toggleSelectAllPage}
+                    className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  />
+                </th>
                 <th className="px-4 py-2.5 font-medium">計上日</th>
                 <th className="px-4 py-2.5 font-medium">区分</th>
                 <th className="px-4 py-2.5 font-medium">科目</th>
@@ -143,8 +205,24 @@ export function TransactionTable({
             <tbody className="divide-y divide-slate-100">
               {rows.map((t) => {
                 const income = t.kind === "income";
+                const editable = isEditable(t);
+                const checked = selected.has(t.id);
                 return (
-                  <tr key={t.id} className="hover:bg-slate-50">
+                  <tr
+                    key={t.id}
+                    className={checked ? "bg-rose-50/60" : "hover:bg-slate-50"}
+                  >
+                    <td className="px-4 py-2.5">
+                      {editable ? (
+                        <input
+                          type="checkbox"
+                          aria-label="この取引を選択"
+                          checked={checked}
+                          onChange={() => toggleSelect(t.id)}
+                          className="h-4 w-4 cursor-pointer accent-rose-600"
+                        />
+                      ) : null}
+                    </td>
                     <td className="px-4 py-2.5 tabular-nums text-slate-600">
                       {formatDate(t.date)}
                     </td>

@@ -7,7 +7,7 @@ import { propertyTransactions } from "@/features/loan/service";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { Button } from "@/shared/components/ui/Field";
 import { cn } from "@/shared/lib/cn";
-import { useStore } from "@/data/store";
+import { useStore, deleteProperties } from "@/data/store";
 
 const STATUS_ORDER: Record<PropertyStatus, number> = { prospect: 0, owned: 1, sold: 2 };
 type Filter = "all" | PropertyStatus;
@@ -15,6 +15,28 @@ type Filter = "all" | PropertyStatus;
 export function Properties() {
   const { properties, transactions, loans } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const exitSelect = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`選択した${ids.length}件の物件を削除します。\n紐づく取引・融資もすべて削除されます。よろしいですか？`)) return;
+    deleteProperties(ids);
+    exitSelect();
+  };
 
   const counts: Record<Filter, number> = {
     all: properties.length,
@@ -47,12 +69,33 @@ export function Properties() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/transactions/new">
-            <Button variant="ghost">収支を登録</Button>
-          </Link>
-          <Link href="/properties/new">
-            <Button>＋ 物件を登録</Button>
-          </Link>
+          {selecting ? (
+            <>
+              <Button variant="ghost" onClick={exitSelect}>
+                キャンセル
+              </Button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={selected.size === 0}
+                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-rose-700 disabled:opacity-50"
+              >
+                選択を削除{selected.size > 0 ? `（${selected.size}）` : ""}
+              </button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setSelecting(true)}>
+                選択して削除
+              </Button>
+              <Link href="/transactions/new">
+                <Button variant="ghost">収支を登録</Button>
+              </Link>
+              <Link href="/properties/new">
+                <Button>＋ 物件を登録</Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -87,7 +130,13 @@ export function Properties() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {analytics.map((a) => (
-            <PropertyCard key={a.property.id} analytics={a} />
+            <PropertyCard
+              key={a.property.id}
+              analytics={a}
+              selectionMode={selecting}
+              selected={selected.has(a.property.id)}
+              onToggleSelect={() => toggleSelect(a.property.id)}
+            />
           ))}
         </div>
       )}
