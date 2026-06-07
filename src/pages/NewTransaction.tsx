@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "@/router";
 import { TransactionForm } from "@/features/transaction/components/TransactionForm";
+import { BatchTransactionForm } from "@/features/transaction/components/BatchTransactionForm";
 import { Card } from "@/shared/components/ui/Card";
+import { cn } from "@/shared/lib/cn";
 
 export function NewTransaction() {
   const propertyId = useSearchParams().get("propertyId") ?? undefined;
+  const [batch, setBatch] = useState(false);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -17,8 +21,31 @@ export function NewTransaction() {
         </p>
       </div>
 
+      <div className="inline-flex rounded-lg border border-slate-300 p-0.5 text-sm">
+        {[
+          { key: false, label: "1件ずつ" },
+          { key: true, label: "まとめて（複数件）" },
+        ].map((m) => (
+          <button
+            key={String(m.key)}
+            type="button"
+            onClick={() => setBatch(m.key)}
+            className={cn(
+              "rounded-md px-3 py-1.5 font-medium transition",
+              batch === m.key ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100",
+            )}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
       <Card>
-        <TransactionForm defaultPropertyId={propertyId} />
+        {batch ? (
+          <BatchTransactionForm defaultPropertyId={propertyId} />
+        ) : (
+          <TransactionForm defaultPropertyId={propertyId} />
+        )}
       </Card>
     </div>
   );

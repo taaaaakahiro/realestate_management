@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { Loan } from "@/features/loan/types";
-import { loanSummary } from "@/features/loan/amortization";
-import { addRatePeriod } from "@/data/store";
+import {
+  PREPAYMENT_TYPE_LABEL,
+  type Loan,
+  type PrepaymentType,
+} from "@/features/loan/types";
+import { buildSchedule, loanSummary } from "@/features/loan/amortization";
+import { addPrepayment, addRatePeriod } from "@/data/store";
 import { Card, CardLabel, CardValue } from "@/shared/components/ui/Card";
-import { Button, Input, Label } from "@/shared/components/ui/Field";
-import { formatMan, formatPercent, formatMonth } from "@/shared/lib/format";
+import { Button, Input, Label, Select } from "@/shared/components/ui/Field";
+import {
+  formatMan,
+  formatPercent,
+  formatMonth,
+  formatYen,
+  withThousands,
+} from "@/shared/lib/format";
 import { TODAY_ISO } from "@/shared/lib/clock";
 import { isValidDate, sanitizeNumberInput, validateNumber } from "@/shared/lib/validation";
 
@@ -16,6 +26,17 @@ export function LoanPanel({ loan }: { loan: Loan }) {
   const [rate, setRate] = useState("");
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 繰上返済フォーム
+  const [ppOpen, setPpOpen] = useState(false);
+  const [ppDate, setPpDate] = useState("");
+  const [ppAmount, setPpAmount] = useState("");
+  const [ppType, setPpType] = useState<PrepaymentType>("shorten_term");
+  const [ppError, setPpError] = useState<string | null>(null);
+
+  // 完済予定月（スケジュール最終行）
+  const schedule = buildSchedule(loan);
+  const payoffMonth = schedule.length > 0 ? schedule[schedule.length - 1].month : null;
 
   function submitRate(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +49,19 @@ export function LoanPanel({ loan }: { loan: Loan }) {
     setFrom("");
     setRate("");
     setOpen(false);
+  }
+
+  function submitPrepayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValidDate(ppDate)) return setPpError("実行日を正しく入力してください。");
+    const amt = validateNumber(ppAmount, { label: "繰上返済額" });
+    if (typeof amt === "string") return setPpError(amt);
+    if (amt === null) return setPpError("繰上返済額を入力してください。");
+    setPpError(null);
+    addPrepayment(loan.propertyId, { date: ppDate, amount: amt * 1000, type: ppType });
+    setPpDate("");
+    setPpAmount("");
+    setPpOpen(false);
   }
 
   return (
@@ -44,6 +78,11 @@ export function LoanPanel({ loan }: { loan: Loan }) {
         <div>
           <CardLabel>借入元本</CardLabel>
           <CardValue className="text-xl">{formatMan(s.principal)}</CardValue>
+          {loan.downPayment ? (
+            <p className="mt-1 text-xs text-slate-500">
+              手出し {formatMan(loan.downPayment)}
+            </p>
+          ) : null}
         </div>
         <div>
           <CardLabel>現在の残債</CardLabel>
@@ -122,6 +161,92 @@ export function LoanPanel({ loan }: { loan: Loan }) {
         {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
         <p className="mt-2 text-xs text-slate-500">
           金利変更を登録すると、以降の返済額・利息が再計算され、取引明細にも反映されます。
+        </p>
+      </div>
+
+      {/* 繰り上げ返済 */}
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-700">
+            繰り上げ返済
+            {payoffMonth && (
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                完済予定 {formatMonth(`${payoffMonth}-01`)}
+              </span>
+            )}
+          </h3>
+          <button
+            type="button"
+            onClick={() => setPpOpen((v) => !v)}
+            className="text-sm font-semibold text-indigo-600 hover:underline"
+          >
+            {ppOpen ? "閉じる" : "＋ 繰上返済を登録"}
+          </button>
+        </div>
+
+        {loan.prepayments && loan.prepayments.length > 0 ? (
+          <ul className="space-y-1 text-sm">
+            {loan.prepayments.map((pp, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5"
+              >
+                <span className="text-slate-600">
+                  {formatMonth(pp.date)}・{PREPAYMENT_TYPE_LABEL[pp.type]}
+                </span>
+                <span className="font-semibold tabular-nums text-rose-600">
+                  {formatYen(pp.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-slate-500">繰り上げ返済の登録はありません。</p>
+        )}
+
+        {ppOpen && (
+          <form onSubmit={submitPrepayment} className="mt-3 flex flex-wrap items-end gap-3">
+            <div>
+              <Label htmlFor="ppDate">実行日</Label>
+              <Input
+                id="ppDate"
+                type="date"
+                value={ppDate}
+                onChange={(e) => setPpDate(e.target.value)}
+                required
+                className="max-w-[170px]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ppAmount">繰上返済額（千円）</Label>
+              <Input
+                id="ppAmount"
+                type="text"
+                inputMode="numeric"
+                value={withThousands(ppAmount)}
+                onChange={(e) => setPpAmount(sanitizeNumberInput(e.target.value))}
+                placeholder="3000"
+                required
+                className="max-w-[150px]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ppType">方式</Label>
+              <Select
+                id="ppType"
+                value={ppType}
+                onChange={(e) => setPpType(e.target.value as PrepaymentType)}
+              >
+                <option value="shorten_term">期間短縮型</option>
+                <option value="reduce_payment">返済額軽減型</option>
+              </Select>
+            </div>
+            <Button type="submit">登録</Button>
+          </form>
+        )}
+        {ppError && <p className="mt-2 text-xs text-rose-600">{ppError}</p>}
+        <p className="mt-2 text-xs text-slate-500">
+          期間短縮型は完済を早め、返済額軽減型は以降の毎月返済を下げます。残債・利息・明細に反映されます。
         </p>
       </div>
     </Card>

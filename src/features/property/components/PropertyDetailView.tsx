@@ -8,6 +8,7 @@ import {
   saleNet,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
+import { RecoveryForecast } from "@/features/analytics/components/RecoveryForecast";
 import { acquisitionCost, formatPostalCode, STATUS_LABEL } from "@/features/property/types";
 import { LoanPanel } from "@/features/loan/components/LoanPanel";
 import { SimulationPanel } from "@/features/simulation/components/SimulationPanel";
@@ -96,7 +97,21 @@ export function PropertyDetailView() {
             <h1 className="text-2xl font-bold text-slate-900">{property.name}</h1>
             <p className="text-sm text-slate-500">
               {property.postalCode && `〒${formatPostalCode(property.postalCode)} `}
-              {property.address}
+              {property.address ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    property.address,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:underline"
+                  title="Google マップで表示"
+                >
+                  {property.address}
+                </a>
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <Badge tone={statusTone[property.status]}>{STATUS_LABEL[property.status]}</Badge>
@@ -308,6 +323,11 @@ export function PropertyDetailView() {
             </Card>
           </div>
 
+          {/* 投下資本の回収予測（保有中のみ） */}
+          {property.status === "owned" && (
+            <RecoveryForecast analytics={a} transactions={propertyTxns} untilISO={until} />
+          )}
+
           {/* 融資・返済 */}
           {loan && <LoanPanel loan={loan} />}
 
@@ -334,7 +354,7 @@ export function PropertyDetailView() {
               ＋ この物件に収支を登録
             </Link>
           </div>
-          <TransactionTable transactions={propertyTxns} />
+          <TransactionTable transactions={propertyTxns} title={property.name} />
         </section>
       )}
     </div>

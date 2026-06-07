@@ -8,15 +8,18 @@ export const mockLoans: Loan[] = [
   {
     propertyId: "prop-001",
     bankName: "横浜銀行",
+    downPayment: 3_500_000,
     principal: 25_000_000,
     startDate: "2023-01-15",
     termMonths: 35 * 12,
     method: "元利均等",
     ratePeriods: [{ from: "2023-01-15", annualRatePercent: 1.8 }],
+    prepayments: [{ date: "2024-06-01", amount: 2_000_000, type: "shorten_term" }],
   },
   {
     propertyId: "prop-002",
     bankName: "住信SBIネット銀行",
+    downPayment: 8_000_000,
     principal: 56_000_000,
     startDate: "2022-06-01",
     termMonths: 30 * 12,
