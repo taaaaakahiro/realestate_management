@@ -96,7 +96,21 @@ export function PropertyDetailView() {
             <h1 className="text-2xl font-bold text-slate-900">{property.name}</h1>
             <p className="text-sm text-slate-500">
               {property.postalCode && `〒${formatPostalCode(property.postalCode)} `}
-              {property.address}
+              {property.address ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    property.address,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:underline"
+                  title="Google マップで表示"
+                >
+                  {property.address}
+                </a>
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <Badge tone={statusTone[property.status]}>{STATUS_LABEL[property.status]}</Badge>
