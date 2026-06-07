@@ -8,6 +8,7 @@ import {
   saleNet,
 } from "@/features/analytics/service";
 import { RecoveryChart } from "@/features/analytics/components/RecoveryChart";
+import { RecoveryForecast } from "@/features/analytics/components/RecoveryForecast";
 import { acquisitionCost, formatPostalCode, STATUS_LABEL } from "@/features/property/types";
 import { LoanPanel } from "@/features/loan/components/LoanPanel";
 import { SimulationPanel } from "@/features/simulation/components/SimulationPanel";
@@ -321,6 +322,11 @@ export function PropertyDetailView() {
               </p>
             </Card>
           </div>
+
+          {/* 投下資本の回収予測（保有中のみ） */}
+          {property.status === "owned" && (
+            <RecoveryForecast analytics={a} transactions={propertyTxns} untilISO={until} />
+          )}
 
           {/* 融資・返済 */}
           {loan && <LoanPanel loan={loan} />}

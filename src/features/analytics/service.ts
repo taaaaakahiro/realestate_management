@@ -30,6 +30,46 @@ export function saleNet(p: Property): number {
   return (p.salePrice ?? 0) - (p.saleExpenses ?? 0);
 }
 
+export interface RecoveryPace {
+  /** 集計に使った月数 */
+  months: number;
+  /** 年換算した家賃等の収入ペース */
+  annual: number;
+  /** 取得原価の未回収額（取得原価 − 累計収入） */
+  remaining: number;
+  /** 直近ペースで取得原価を回収しきるまでの年数（回収済みは 0、ペースが0は null） */
+  yearsToRecover: number | null;
+}
+
+/**
+ * 回収率（累計収入 ÷ 取得原価）と整合する回収予測。
+ * 直近 windowMonths か月の収入ペースで、取得原価をあと何年で回収できるかを試算する。
+ */
+export function recoveryPace(
+  a: PropertyAnalytics,
+  transactions: Transaction[],
+  untilISO: string,
+  windowMonths = 12,
+): RecoveryPace {
+  const until = new Date(untilISO);
+  const startBound = new Date(until.getFullYear(), until.getMonth() - (windowMonths - 1), 1);
+  let income = 0;
+  const monthsSet = new Set<string>();
+  for (const t of transactions) {
+    if (t.kind !== "income") continue;
+    const d = new Date(t.date);
+    if (d >= startBound && d <= until) {
+      income += t.amount;
+      monthsSet.add(t.date.slice(0, 7));
+    }
+  }
+  const months = Math.max(1, monthsSet.size);
+  const annual = (income / months) * 12;
+  const remaining = Math.max(0, a.acquisitionCost - a.totalIncome);
+  const yearsToRecover = remaining === 0 ? 0 : annual > 0 ? remaining / annual : null;
+  return { months, annual, remaining, yearsToRecover };
+}
+
 /**
  * 実現損益 = 累計損益（収入 − 投資総額）+ 売却純額。
  * 売却済み物件が確定させた通算の損益。
