@@ -14,7 +14,7 @@ export function PropertyEditView() {
   if (!property) {
     return (
       <div className="space-y-4">
-        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/properties" className="text-sm text-green-700 hover:underline">
           ← 物件一覧へ戻る
         </Link>
         <p className="text-sm text-slate-500">物件が見つかりませんでした。</p>
@@ -27,7 +27,7 @@ export function PropertyEditView() {
       <div>
         <Link
           href={`/properties/detail?id=${property.id}`}
-          className="text-sm text-indigo-600 hover:underline"
+          className="text-sm text-green-700 hover:underline"
         >
           ← 物件詳細へ戻る
         </Link>

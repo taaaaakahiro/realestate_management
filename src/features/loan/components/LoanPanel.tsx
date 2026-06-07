@@ -97,7 +97,7 @@ export function LoanPanel({ loan }: { loan: Loan }) {
         </div>
         <div>
           <CardLabel>現在の適用金利</CardLabel>
-          <CardValue className="text-xl text-indigo-600">
+          <CardValue className="text-xl text-green-700">
             {formatPercent(s.currentRatePercent, 2)}
           </CardValue>
         </div>
@@ -110,7 +110,7 @@ export function LoanPanel({ loan }: { loan: Loan }) {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="text-sm font-semibold text-indigo-600 hover:underline"
+            className="text-sm font-semibold text-green-700 hover:underline"
           >
             {open ? "閉じる" : "＋ 金利変更を登録"}
           </button>
@@ -178,7 +178,7 @@ export function LoanPanel({ loan }: { loan: Loan }) {
           <button
             type="button"
             onClick={() => setPpOpen((v) => !v)}
-            className="text-sm font-semibold text-indigo-600 hover:underline"
+            className="text-sm font-semibold text-green-700 hover:underline"
           >
             {ppOpen ? "閉じる" : "＋ 繰上返済を登録"}
           </button>

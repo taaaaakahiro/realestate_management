@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f5f8f3;
   --foreground: #0f172a;
+  /* マーウンのイメージカラー（緑・黄緑）。白文字が乗る面は読みやすい濃いめに */
+  --brand-from: #15803d; /* green-700 */
+  --brand-to: #4d7c0f; /* lime-700：黄緑（白文字でも可読） */
 }
 
 @theme inline {
@@ -11,7 +14,29 @@
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* 柔らかな背景グラデーション */
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(101, 163, 13, 0.08), transparent 60%),
+    radial-gradient(1000px 500px at -10% 0%, rgba(21, 128, 61, 0.07), transparent 55%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+/* ブランドのグラデーション群（Tailwind バージョン差を避けるため CSS で定義） */
+.brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+}
+.brand-bar {
+  background-image: linear-gradient(to right, #16a34a, #84cc16);
+}
+.brand-text {
+  /* ロゴ文字は白背景上なので鮮やかな緑→黄緑 */
+  background-image: linear-gradient(135deg, #16a34a, #65a30d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

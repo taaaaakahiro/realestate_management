@@ -19,6 +19,7 @@ import { SearchSelect } from "@/shared/components/ui/SearchSelect";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
+  calcRegistrationFee,
   calcStampDuty,
   DEFAULT_BROKERAGE_FEE,
   simulate,
@@ -120,7 +121,9 @@ export function PropertyForm({
     purchaseDate,
   ).settlement;
   const brokerageYen = yen(brokerageFee);
-  const fixedExpense = acqTax + settlement + brokerageYen;
+  const registrationFee = calcRegistrationFee(landAssessedYen, buildingAssessedYen).total;
+  // 登記費用は取得原価に含む。逆算では物件価格を求めるための差引経費に加える。
+  const fixedExpense = acqTax + settlement + registrationFee + brokerageYen;
 
   // 取得前: 想定家賃と目標利回りから投資総額を算出し、経費を引いて物件価格を逆算
   const yieldPct = Number(targetYield) || 0;
@@ -274,6 +277,7 @@ export function PropertyForm({
       stampDuty: calcStampDuty(priceYen),
       realEstateAcquisitionTax: sim.acquisitionTax.total,
       propertyTaxSettlement: sim.settlement.settlement,
+      registrationFee: sim.registrationFee.total,
       purchaseDate,
       monthlyRent: rentYen,
       emoji: iconForType(type),
@@ -439,9 +443,9 @@ export function PropertyForm({
       </FormRow>
 
       {isProspect && (
-        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-sm">
+        <div className="rounded-lg border border-green-100 bg-green-50/50 p-3 text-sm">
           <p className="mb-1 text-xs text-slate-500">
-            想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
+            想定家賃と目標利回りから投資総額を算出し、経費（取得税＋精算金＋登記費用＋仲介手数料＋印紙代）を引いて物件価格を逆算します。
           </p>
           <div className="flex justify-between">
             <span className="text-slate-500">投資総額（家賃 ÷ 利回り）</span>
@@ -449,13 +453,13 @@ export function PropertyForm({
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">
-              − 経費（取得税＋精算金＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
+              − 経費（取得税＋精算金＋登記{formatYen(registrationFee)}＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
             </span>
             <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
           </div>
-          <div className="mt-1 flex justify-between border-t border-indigo-100 pt-1">
+          <div className="mt-1 flex justify-between border-t border-green-100 pt-1">
             <span className="font-medium text-slate-700">= 逆算した物件価格</span>
-            <span className="tabular-nums font-bold text-indigo-700">
+            <span className="tabular-nums font-bold text-green-700">
               {formatYen(derivedPrice)}
             </span>
           </div>
@@ -536,6 +540,19 @@ export function PropertyForm({
               </span>
             </div>
             <div className="flex justify-between">
+              <span className="text-slate-500">
+                登記費用（自動・登録免許税＋司法書士報酬）
+              </span>
+              <span className="tabular-nums text-slate-800">
+                {formatYen(sim.registrationFee.total)}
+                <span className="ml-1 text-xs text-slate-400">
+                  （登免 土地 {formatYen(sim.registrationFee.landTax)}・建物{" "}
+                  {formatYen(sim.registrationFee.buildingTax)}＋報酬{" "}
+                  {formatYen(sim.registrationFee.scrivenerFee)}）
+                </span>
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-slate-500">印紙代（自動・印紙税法）</span>
               <span className="tabular-nums text-slate-800">{formatYen(sim.stampDuty)}</span>
             </div>
@@ -554,7 +571,7 @@ export function PropertyForm({
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">表面利回り / 実質利回り（概算）</span>
-              <span className="tabular-nums font-semibold text-indigo-600">
+              <span className="tabular-nums font-semibold text-green-700">
                 {formatPercent(sim.grossYield)} / {formatPercent(sim.netYield)}
               </span>
             </div>
@@ -574,7 +591,7 @@ export function PropertyForm({
             type="checkbox"
             checked={useLoan}
             onChange={(e) => setUseLoan(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+            className="h-4 w-4 rounded border-slate-300 text-green-700 focus:ring-green-200"
           />
           融資を利用する（ローンを組む）
         </label>

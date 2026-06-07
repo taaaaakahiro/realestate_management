@@ -11,26 +11,37 @@ const STATUS_TONE = {
   sold: "expense",
 } as const;
 
-export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
+export function PropertyCard({
+  analytics,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}: {
+  analytics: PropertyAnalytics;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const { property: p, recoveryRate, totalIncome, netProfit, grossYield } = analytics;
   const recovered = netProfit >= 0;
   const isProspect = p.status === "prospect";
 
-  return (
-    <Link
-      href={`/properties/detail?id=${p.id}`}
-      className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
-    >
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{p.emoji}</span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-50 text-2xl ring-1 ring-slate-100">
+            {p.emoji}
+          </span>
           <div>
             <h3 className="font-bold text-slate-900">{p.name}</h3>
             <p className="text-xs text-slate-500">{p.address}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+          <Badge tone={STATUS_TONE[p.status]} dot>
+            {STATUS_LABEL[p.status]}
+          </Badge>
           <Badge tone="neutral">{p.type}</Badge>
         </div>
       </div>
@@ -65,7 +76,7 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
         <>
           <div className="mt-4 flex items-end justify-between">
             <span className="text-sm text-slate-500">回収率</span>
-            <span className="text-2xl font-bold tabular-nums text-indigo-600">
+            <span className="text-2xl font-bold tabular-nums text-green-700">
               {formatPercent(recoveryRate)}
             </span>
           </div>
@@ -100,6 +111,42 @@ export function PropertyCard({ analytics }: { analytics: PropertyAnalytics }) {
           </dl>
         </>
       )}
+    </>
+  );
+
+  if (selectionMode) {
+    return (
+      <button
+        type="button"
+        onClick={onToggleSelect}
+        aria-pressed={selected}
+        className={`relative block w-full rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-200 ${
+          selected
+            ? "border-rose-400 ring-2 ring-rose-200"
+            : "border-slate-200/80 hover:border-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-md border text-xs font-bold ${
+            selected
+              ? "border-rose-500 bg-rose-500 text-white"
+              : "border-slate-300 bg-white text-transparent"
+          }`}
+          aria-hidden
+        >
+          ✓
+        </span>
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={`/properties/detail?id=${p.id}`}
+      className="block rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-green-300 hover:shadow-lg hover:shadow-green-100/50"
+    >
+      {body}
     </Link>
   );
 }

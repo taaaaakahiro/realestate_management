@@ -20,15 +20,19 @@ export function Nav() {
   const close = () => setOpen(false);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link
           href="/"
           onClick={close}
-          className="flex shrink-0 items-center gap-2 text-lg font-bold whitespace-nowrap text-slate-900"
+          className="flex shrink-0 items-center gap-2 text-lg font-extrabold whitespace-nowrap tracking-tight"
         >
-          <span>🏠</span>
-          <span>PropFolio</span>
+          <img
+            src={`${import.meta.env.BASE_URL}icon.svg`}
+            alt="PropFolio"
+            className="h-8 w-8 rounded-xl"
+          />
+          <span className="brand-text">PropFolio</span>
         </Link>
 
         {/* デスクトップ: 横並び */}
@@ -40,7 +44,7 @@ export function Nav() {
               className={cn(
                 "rounded-lg px-3 py-1.5 whitespace-nowrap transition",
                 isActive(pathname, l.href)
-                  ? "bg-slate-100 text-slate-900"
+                  ? "bg-green-50 text-green-700"
                   : "text-slate-600 hover:bg-slate-100",
               )}
             >
@@ -49,7 +53,7 @@ export function Nav() {
           ))}
           <Link
             href="/properties/new"
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 whitespace-nowrap text-white transition hover:bg-indigo-700"
+            className="ml-1 rounded-xl brand-gradient px-3.5 py-1.5 whitespace-nowrap text-white shadow-sm transition hover:shadow-md hover:brightness-105"
           >
             ＋ 物件登録
           </Link>
@@ -91,7 +95,7 @@ export function Nav() {
               className={cn(
                 "block rounded-lg px-3 py-2.5 text-sm font-medium transition",
                 isActive(pathname, l.href)
-                  ? "bg-slate-100 text-slate-900"
+                  ? "bg-green-50 text-green-700"
                   : "text-slate-700 hover:bg-slate-100",
               )}
             >
@@ -101,7 +105,7 @@ export function Nav() {
           <Link
             href="/properties/new"
             onClick={close}
-            className="mt-1 block rounded-lg bg-indigo-600 px-3 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-indigo-700"
+            className="mt-1 block rounded-xl brand-gradient px-3 py-2.5 text-center text-sm font-semibold text-white shadow-sm"
           >
             ＋ 物件登録
           </Link>

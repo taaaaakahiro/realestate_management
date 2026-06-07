@@ -38,7 +38,7 @@ export function PropertyDetailView() {
   if (!property) {
     return (
       <div className="space-y-4">
-        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/properties" className="text-sm text-green-700 hover:underline">
           ← 物件一覧へ戻る
         </Link>
         <p className="text-sm text-slate-500">物件が見つかりませんでした。</p>
@@ -88,7 +88,7 @@ export function PropertyDetailView() {
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/properties" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/properties" className="text-sm text-green-700 hover:underline">
           ← 物件一覧へ戻る
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -104,7 +104,7 @@ export function PropertyDetailView() {
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 hover:underline"
+                  className="text-green-700 hover:underline"
                   title="Google マップで表示"
                 >
                   {property.address}
@@ -278,7 +278,7 @@ export function PropertyDetailView() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <CardLabel>回収率（取得原価ベース）</CardLabel>
-                <CardValue className="text-3xl text-indigo-600">
+                <CardValue className="text-3xl text-green-700">
                   {formatPercent(a.recoveryRate)}
                 </CardValue>
               </div>
@@ -303,7 +303,8 @@ export function PropertyDetailView() {
               <p className="mt-1 text-xs text-slate-500">
                 物件 {formatMan(property.purchasePrice)} + 不動産取得税{" "}
                 {formatMan(property.realEstateAcquisitionTax)} + 固定資産税清算金{" "}
-                {formatMan(property.propertyTaxSettlement)}
+                {formatMan(property.propertyTaxSettlement)} + 登記費用{" "}
+                {formatMan(property.registrationFee ?? 0)}
               </p>
             </Card>
             <Card>
@@ -349,7 +350,7 @@ export function PropertyDetailView() {
             <h2 className="text-lg font-bold text-slate-900">取引明細</h2>
             <Link
               href={`/transactions/new?propertyId=${property.id}`}
-              className="text-sm font-semibold text-indigo-600 hover:underline"
+              className="text-sm font-semibold text-green-700 hover:underline"
             >
               ＋ この物件に収支を登録
             </Link>

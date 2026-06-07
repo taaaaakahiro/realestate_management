@@ -43,6 +43,8 @@ export interface Property {
   realEstateAcquisitionTax: number;
   /** 固定資産税清算金（引き渡し予定日から自動算出） */
   propertyTaxSettlement: number;
+  /** 登記費用（登録免許税＋司法書士報酬の概算。評価額から自動算出） */
+  registrationFee: number;
   /** 取得日（取得前は引き渡し予定日）(ISO 8601) */
   purchaseDate: string;
   /** 売却価格（売却済みのみ） */
@@ -75,7 +77,12 @@ export function formatPostalCode(code: string): string {
   return digits.length === 7 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : code;
 }
 
-/** 取得原価 = 物件価格 + 不動産取得税 + 固定資産税清算金 */
+/** 取得原価 = 物件価格 + 不動産取得税 + 固定資産税清算金 + 登記費用 */
 export function acquisitionCost(p: Property): number {
-  return p.purchasePrice + p.realEstateAcquisitionTax + p.propertyTaxSettlement;
+  return (
+    p.purchasePrice +
+    p.realEstateAcquisitionTax +
+    p.propertyTaxSettlement +
+    (p.registrationFee ?? 0)
+  );
 }

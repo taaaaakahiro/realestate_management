@@ -2,12 +2,13 @@ import type { Property } from "@/features/property/types";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
+  calcRegistrationFee,
   calcStampDuty,
 } from "@/features/simulation/calc";
 
 type SeedProperty = Omit<
   Property,
-  "realEstateAcquisitionTax" | "propertyTaxSettlement" | "stampDuty"
+  "realEstateAcquisitionTax" | "propertyTaxSettlement" | "stampDuty" | "registrationFee"
 >;
 
 /** 評価額・物件価格・引き渡し日から税額を自動算出して Property を組み立てる */
@@ -24,6 +25,10 @@ function build(seed: SeedProperty): Property {
       seed.buildingAssessedValue,
       seed.purchaseDate,
     ).settlement,
+    registrationFee: calcRegistrationFee(
+      seed.landAssessedValue,
+      seed.buildingAssessedValue,
+    ).total,
   };
 }
 

@@ -9,11 +9,11 @@ export function ProgressBar({ percent }: { percent: number }) {
   const over = percent > 100;
 
   return (
-    <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
       <div
         className={cn(
-          "h-full rounded-full transition-all",
-          over ? "bg-emerald-500" : "bg-indigo-500",
+          "h-full rounded-full transition-all duration-500",
+          over ? "bg-emerald-500" : "brand-bar",
         )}
         style={{ width: `${clamped}%` }}
       />

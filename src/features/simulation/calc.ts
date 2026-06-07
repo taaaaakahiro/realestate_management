@@ -13,6 +13,28 @@ export const DEFAULT_BROKERAGE_FEE = 330_000;
 const ACQ_TAX_RATE = 0.03; // 不動産取得税の軽減税率
 const FIXED_TAX_RATE = 0.014; // 固定資産税の標準税率
 
+/** 司法書士報酬の概算（登記費用の一部）。実際は事務所・登記件数で変動。 */
+export const DEFAULT_JUDICIAL_SCRIVENER_FEE = 100_000;
+
+/**
+ * 登記費用（概算）= 登録免許税（所有権移転）＋ 司法書士報酬の目安。
+ * - 土地: 固定資産税評価額 × 1.5%（軽減税率・令和8年3月末まで）
+ * - 建物: 固定資産税評価額 × 2.0%（本則税率）
+ * - 司法書士報酬: 概算の固定額
+ * いずれも概算。実際は登記の種類・件数・事務所により異なる。
+ */
+export function calcRegistrationFee(
+  landAssessed: number,
+  buildingAssessed: number,
+): { landTax: number; buildingTax: number; scrivenerFee: number; total: number } {
+  const landBase = Math.floor(landAssessed / 1000) * 1000;
+  const buildingBase = Math.floor(buildingAssessed / 1000) * 1000;
+  const landTax = Math.floor((landBase * 0.015) / 100) * 100;
+  const buildingTax = Math.floor((buildingBase * 0.02) / 100) * 100;
+  const scrivenerFee = DEFAULT_JUDICIAL_SCRIVENER_FEE;
+  return { landTax, buildingTax, scrivenerFee, total: landTax + buildingTax + scrivenerFee };
+}
+
 /**
  * 印紙税（不動産の譲渡に関する契約書・軽減税率）を、記載金額（物件価格）から求める。
  * 印紙税法の軽減措置（令和9年3月31日まで）に基づく区分。
@@ -108,9 +130,11 @@ export interface SimulationResult {
   settlement: { annual: number; settlement: number; remainingDays: number; totalDays: number };
   brokerageFee: number;
   stampDuty: number;
-  /** 取得原価 = 物件価格 + 不動産取得税 + 固定資産税精算金 */
+  /** 登記費用（登録免許税＋司法書士報酬の概算） */
+  registrationFee: { landTax: number; buildingTax: number; scrivenerFee: number; total: number };
+  /** 取得原価 = 物件価格 + 不動産取得税 + 固定資産税精算金 + 登記費用 */
   acquisitionCost: number;
-  /** 初期費用合計 = 物件価格 + 仲介手数料 + 印紙代 + 不動産取得税 + 固定資産税精算金 */
+  /** 初期費用合計 = 取得原価 + 仲介手数料 + 印紙代 */
   initialCostTotal: number;
   /** 表面利回り = 年間家賃 ÷ 物件価格 */
   grossYield: number;
@@ -132,7 +156,9 @@ export function simulate(input: SimulationInput): SimulationResult {
     handoverDate,
   );
   const stampDuty = calcStampDuty(purchasePrice); // 物件価格から自動算出
-  const acquisitionCost = purchasePrice + acquisitionTax.total + settlement.settlement;
+  const registrationFee = calcRegistrationFee(landAssessedValue, buildingAssessedValue);
+  const acquisitionCost =
+    purchasePrice + acquisitionTax.total + settlement.settlement + registrationFee.total;
   const initialCostTotal = acquisitionCost + input.brokerageFee + stampDuty;
   const annualRent = input.monthlyRent * 12;
   return {
@@ -142,6 +168,7 @@ export function simulate(input: SimulationInput): SimulationResult {
     settlement,
     brokerageFee: input.brokerageFee,
     stampDuty,
+    registrationFee,
     acquisitionCost,
     initialCostTotal,
     grossYield: purchasePrice > 0 ? (annualRent / purchasePrice) * 100 : 0,

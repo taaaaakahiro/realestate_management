@@ -15,7 +15,7 @@ export function EditTransaction() {
           href={
             transaction ? `/properties/detail?id=${transaction.propertyId}` : "/properties"
           }
-          className="text-sm text-indigo-600 hover:underline"
+          className="text-sm text-green-700 hover:underline"
         >
           ← 物件詳細へ戻る
         </Link>

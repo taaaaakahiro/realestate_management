@@ -26,7 +26,7 @@ export interface StoreData {
 }
 
 // スキーマ変更時はバージョンを上げて古い localStorage を無効化する
-const KEY = "realestate-store-v9";
+const KEY = "realestate-store-v10";
 
 /** ビルド時／初回レンダリングで使う不変のシード */
 const SEED: StoreData = {
@@ -120,6 +120,18 @@ export function deleteProperty(id: string): void {
   emit();
 }
 
+/** 複数物件を、紐づく取引・融資ごとまとめて削除する */
+export function deleteProperties(ids: string[]): void {
+  const set = new Set(ids);
+  state = {
+    properties: state.properties.filter((p) => !set.has(p.id)),
+    transactions: state.transactions.filter((t) => !set.has(t.propertyId)),
+    loans: state.loans.filter((l) => !set.has(l.propertyId)),
+  };
+  persist();
+  emit();
+}
+
 export function addTransaction(input: Omit<Transaction, "id">): Transaction {
   const transaction: Transaction = { id: genId("txn"), ...input };
   state = { ...state, transactions: [...state.transactions, transaction] };
@@ -146,6 +158,17 @@ export function deleteTransaction(id: string): void {
   state = {
     ...state,
     transactions: state.transactions.filter((t) => t.id !== id),
+  };
+  persist();
+  emit();
+}
+
+/** 複数の取引をまとめて削除する */
+export function deleteTransactions(ids: string[]): void {
+  const set = new Set(ids);
+  state = {
+    ...state,
+    transactions: state.transactions.filter((t) => !set.has(t.id)),
   };
   persist();
   emit();
