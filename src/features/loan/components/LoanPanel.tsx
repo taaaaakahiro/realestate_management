@@ -44,6 +44,11 @@ export function LoanPanel({ loan }: { loan: Loan }) {
         <div>
           <CardLabel>借入元本</CardLabel>
           <CardValue className="text-xl">{formatMan(s.principal)}</CardValue>
+          {loan.downPayment ? (
+            <p className="mt-1 text-xs text-slate-500">
+              手出し {formatMan(loan.downPayment)}
+            </p>
+          ) : null}
         </div>
         <div>
           <CardLabel>現在の残債</CardLabel>

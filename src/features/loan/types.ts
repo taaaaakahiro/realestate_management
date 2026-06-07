@@ -16,6 +16,8 @@ export interface Loan {
   propertyId: string;
   /** 借入先の銀行名（任意） */
   bankName?: string;
+  /** 手出し金額（自己資金。借入で賄わない分） */
+  downPayment?: number;
   /** 借入元本 */
   principal: number;
   /** 返済開始日 (ISO 8601) */

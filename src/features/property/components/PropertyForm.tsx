@@ -103,6 +103,9 @@ export function PropertyForm({
     initialLoan?.method ?? REPAYMENT_METHODS[0],
   );
   const [loanBank, setLoanBank] = useState(initialLoan?.bankName ?? "");
+  const [loanDownPayment, setLoanDownPayment] = useState(
+    initialLoan?.downPayment ? String(toSen(initialLoan.downPayment)) : "",
+  );
 
   const landAssessedYen = sen(landAssessed);
   const buildingAssessedYen = sen(buildingAssessed);
@@ -213,11 +216,23 @@ export function PropertyForm({
       if (typeof pChk === "string") return setError(pChk);
     }
 
-    let loanInput: { principal: number; rate: number; years: number; start: string } | null =
-      null;
+    let loanInput: {
+      principal: number;
+      rate: number;
+      years: number;
+      start: string;
+      downPayment: number;
+    } | null = null;
     if (useLoan) {
       const lpChk = validateNumber(loanPrincipal, { label: "借入元本" });
       if (typeof lpChk === "string") return setError(lpChk);
+      const dpChk = validateNumber(loanDownPayment, {
+        label: "手出し金額",
+        min: 0,
+        allowZero: true,
+        optional: true,
+      });
+      if (typeof dpChk === "string") return setError(dpChk);
       const lrChk = validateNumber(loanRate, {
         label: "当初金利",
         min: 0,
@@ -239,6 +254,7 @@ export function PropertyForm({
         rate: lrChk as number,
         years: lyChk as number,
         start: loanStartDate,
+        downPayment: sen(loanDownPayment),
       };
     }
 
@@ -271,6 +287,7 @@ export function PropertyForm({
       addLoan({
         propertyId,
         bankName: loanBank.trim() || undefined,
+        downPayment: loanInput.downPayment || undefined,
         principal: loanInput.principal,
         startDate: loanInput.start,
         termMonths: Math.round(loanInput.years * 12),
@@ -640,6 +657,23 @@ export function PropertyForm({
                   </option>
                 ))}
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="loanDownPayment">手出し金額（自己資金・千円）</Label>
+              <Input
+                id="loanDownPayment"
+                type="text"
+                inputMode="numeric"
+                placeholder="3000"
+                value={withThousands(loanDownPayment)}
+                onChange={(e) => setLoanDownPayment(sanitizeNumberInput(e.target.value))}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                すべて借入しない場合の自己資金。目安（初期費用合計 − 借入元本）:{" "}
+                <strong className="tabular-nums">
+                  {formatYen(Math.max(0, sim.initialCostTotal - sen(loanPrincipal)))}
+                </strong>
+              </p>
             </div>
             <p className="text-xs text-slate-500">
               毎月の返済は元本・利息に自動で分解されます。金利の途中変更は物件詳細から登録できます。
