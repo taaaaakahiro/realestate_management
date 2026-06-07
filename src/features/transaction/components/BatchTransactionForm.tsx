@@ -35,13 +35,16 @@ const emptyRow = (): Row => ({
 
 const isBlank = (r: Row) => r.amount.trim() === "" && r.date.trim() === "";
 
+const MAX_ROWS = 10;
+const INITIAL_ROWS = 5;
+
 export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?: string }) {
   const router = useRouter();
   const { properties } = useStore();
   const [propertyId, setPropertyId] = useState(
     defaultPropertyId ?? properties[0]?.id ?? "",
   );
-  const [rows, setRows] = useState<Row[]>(() => Array.from({ length: 5 }, emptyRow));
+  const [rows, setRows] = useState<Row[]>(() => Array.from({ length: INITIAL_ROWS }, emptyRow));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -59,6 +62,10 @@ export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?
 
   function update(i: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  }
+
+  function removeRow(i: number) {
+    setRows((prev) => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)));
   }
 
   function changeKind(i: number, kind: TransactionKind) {
@@ -122,7 +129,17 @@ export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?
           const cats = r.kind === "income" ? INCOME_CATEGORIES : BATCH_EXPENSE;
           return (
             <div key={i} className="rounded-xl border border-slate-200 p-3">
-              <div className="mb-2 text-xs font-medium text-slate-400">{i + 1} 件目</div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-400">{i + 1} 件目</span>
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  disabled={rows.length <= 1}
+                  className="text-xs text-rose-600 hover:underline disabled:opacity-30"
+                >
+                  行を削除
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <Select
                   value={r.kind}
@@ -172,10 +189,11 @@ export function BatchTransactionForm({ defaultPropertyId }: { defaultPropertyId?
 
       <button
         type="button"
-        onClick={() => setRows((prev) => [...prev, emptyRow()])}
-        className="text-sm font-semibold text-indigo-600 hover:underline"
+        onClick={() => setRows((prev) => (prev.length >= MAX_ROWS ? prev : [...prev, emptyRow()]))}
+        disabled={rows.length >= MAX_ROWS}
+        className="text-sm font-semibold text-indigo-600 hover:underline disabled:opacity-40"
       >
-        ＋ 行を追加
+        ＋ 行を追加（最大{MAX_ROWS}件・現在{rows.length}件）
       </button>
 
       <p className="text-xs text-slate-500">

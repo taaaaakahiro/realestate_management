@@ -2,7 +2,7 @@
 
 🌐 **公開URL: https://taaaaakahiro.github.io/realestate_management/**
 
-📖 **使い方マニュアル: [docs/MANUAL.md](docs/MANUAL.md)** ／ 📐 **仕様・バリデーション: [docs/SPEC.md](docs/SPEC.md)**
+📖 **使い方: [docs/MANUAL.md](docs/MANUAL.md)** ／ 📐 **仕様: [docs/SPEC.md](docs/SPEC.md)** ／ 📋 **要件: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)**
 
 購入時の**原価**に加えて、**日々の支出**・**家賃収入**・**融資（ローン）**を管理し、不動産投資の**回収率**を見える化するアプリです。
 
