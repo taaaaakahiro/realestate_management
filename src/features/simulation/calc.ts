@@ -14,7 +14,7 @@ const ACQ_TAX_RATE = 0.03; // 不動産取得税の軽減税率
 const FIXED_TAX_RATE = 0.014; // 固定資産税の標準税率
 
 /** 登記費用（登録免許税＋司法書士報酬）の既定値。自動計算せず手入力する。 */
-export const DEFAULT_REGISTRATION_FEE = 350_000;
+export const DEFAULT_REGISTRATION_FEE = 100_000;
 
 /**
  * 印紙税（不動産の譲渡に関する契約書・軽減税率）を、記載金額（物件価格）から求める。
