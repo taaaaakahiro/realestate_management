@@ -6,7 +6,7 @@ import { mockTransactions } from "./mock/transactions";
 import { mockLoans } from "./mock/loans";
 import type { Property } from "@/features/property/types";
 import type { Transaction } from "@/features/transaction/types";
-import type { Loan, RatePeriod } from "@/features/loan/types";
+import type { Loan, Prepayment, RatePeriod } from "@/features/loan/types";
 
 /**
  * クライアント側データストア（localStorage 永続化）。
@@ -26,7 +26,7 @@ export interface StoreData {
 }
 
 // スキーマ変更時はバージョンを上げて古い localStorage を無効化する
-const KEY = "realestate-store-v8";
+const KEY = "realestate-store-v9";
 
 /** ビルド時／初回レンダリングで使う不変のシード */
 const SEED: StoreData = {
@@ -163,6 +163,25 @@ export function addLoan(loan: Loan): Loan {
 /** 物件に紐づく融資を削除する */
 export function removeLoan(propertyId: string): void {
   state = { ...state, loans: state.loans.filter((l) => l.propertyId !== propertyId) };
+  persist();
+  emit();
+}
+
+/** 既存融資に繰り上げ返済を追加する */
+export function addPrepayment(propertyId: string, prepayment: Prepayment): void {
+  state = {
+    ...state,
+    loans: state.loans.map((l) =>
+      l.propertyId === propertyId
+        ? {
+            ...l,
+            prepayments: [...(l.prepayments ?? []), prepayment].sort((a, b) =>
+              a.date.localeCompare(b.date),
+            ),
+          }
+        : l,
+    ),
+  };
   persist();
   emit();
 }

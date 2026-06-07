@@ -8,6 +8,8 @@ export interface ScheduleRow {
   interest: number;
   principal: number;
   payment: number;
+  /** その月の繰上返済額（元金充当） */
+  prepayment: number;
   /** 返済後の残債 */
   balance: number;
 }
@@ -42,13 +44,25 @@ export function buildSchedule(loan: Loan): ScheduleRow[] {
   const n0 = loan.termMonths;
   if (n0 <= 0 || loan.principal <= 0) return rows;
 
+  // 月ごとの繰上返済を集計
+  const prepayByMonth = new Map<string, { amount: number; reduce: boolean }>();
+  for (const pp of loan.prepayments ?? []) {
+    const key = ym(monthStart(pp.date));
+    const cur = prepayByMonth.get(key) ?? { amount: 0, reduce: false };
+    cur.amount += pp.amount;
+    if (pp.type === "reduce_payment") cur.reduce = true;
+    prepayByMonth.set(key, cur);
+  }
+
   let balance = loan.principal;
-  const equalPrincipal = loan.principal / n0; // 元金均等用
-  let payment = 0; // 元利均等用（金利変更時に再計算）
+  let equalPrincipal = loan.principal / n0; // 元金均等用（軽減型で再計算）
+  let payment = 0; // 元利均等用（金利変更・軽減型で再計算）
   let prevRate = Number.NaN;
+  let recompute = false; // 繰上返済(軽減型)後の再計算フラグ
 
   for (let i = 0; i < n0 && balance > 0.5; i++) {
     const monthDate = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    const key = ym(monthDate);
     const annual = rateForMonth(loan, monthDate);
     const r = annual / 100 / 12;
     const remaining = n0 - i;
@@ -56,26 +70,38 @@ export function buildSchedule(loan: Loan): ScheduleRow[] {
     let principalPart: number;
 
     if (loan.method === "元利均等") {
-      if (annual !== prevRate) {
+      if (annual !== prevRate || recompute) {
         payment =
           r === 0 ? balance / remaining : (balance * r) / (1 - Math.pow(1 + r, -remaining));
         prevRate = annual;
       }
       principalPart = payment - interest;
     } else {
+      if (recompute) equalPrincipal = balance / remaining;
       principalPart = equalPrincipal;
     }
+    recompute = false;
 
     // 最終月や端数で過剰返済しないよう調整
     if (principalPart > balance || i === n0 - 1) principalPart = balance;
-
     balance -= principalPart;
+
+    // 繰上返済を元金に充当
+    let prepay = 0;
+    const pp = prepayByMonth.get(key);
+    if (pp && balance > 0) {
+      prepay = Math.min(pp.amount, balance);
+      balance -= prepay;
+      if (pp.reduce && balance > 0.5) recompute = true; // 返済額軽減型は以降を再計算
+    }
+
     rows.push({
-      month: ym(monthDate),
+      month: key,
       ratePercent: annual,
       interest: Math.round(interest),
       principal: Math.round(principalPart),
       payment: Math.round(principalPart + interest),
+      prepayment: Math.round(prepay),
       balance: Math.max(0, Math.round(balance)),
     });
   }
@@ -91,16 +117,30 @@ export function loanTransactions(loan: Loan, untilISO: string): Transaction[] {
   const txns: Transaction[] = [];
   for (const row of buildSchedule(loan)) {
     if (monthStart(`${row.month}-01`).getTime() > until) break;
-    if (row.payment <= 0) continue;
-    txns.push({
-      id: `loan-${loan.propertyId}-${row.month}`,
-      propertyId: loan.propertyId,
-      date: `${row.month}-27`,
-      kind: "expense",
-      category: "ローン返済",
-      amount: row.payment,
-      breakdown: { principal: row.principal, interest: row.interest },
-    });
+    if (row.payment > 0) {
+      txns.push({
+        id: `loan-${loan.propertyId}-${row.month}`,
+        propertyId: loan.propertyId,
+        date: `${row.month}-27`,
+        kind: "expense",
+        category: "ローン返済",
+        amount: row.payment,
+        breakdown: { principal: row.principal, interest: row.interest },
+      });
+    }
+    // 繰上返済（元金充当）を別取引として計上
+    if (row.prepayment > 0) {
+      txns.push({
+        id: `loan-${loan.propertyId}-${row.month}-prepay`,
+        propertyId: loan.propertyId,
+        date: `${row.month}-27`,
+        kind: "expense",
+        category: "ローン返済",
+        amount: row.prepayment,
+        memo: "繰上返済",
+        breakdown: { principal: row.prepayment, interest: 0 },
+      });
+    }
   }
   return txns;
 }
@@ -154,7 +194,7 @@ export function loanSummary(loan: Loan, untilISO: string): LoanSummary {
 
   for (const row of buildSchedule(loan)) {
     if (monthStart(`${row.month}-01`).getTime() > until) break;
-    principalPaid += row.principal;
+    principalPaid += row.principal + row.prepayment;
     interestPaid += row.interest;
     balance = row.balance;
     currentRate = row.ratePercent;

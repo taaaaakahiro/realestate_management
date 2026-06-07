@@ -12,6 +12,24 @@ export interface RatePeriod {
   annualRatePercent: number;
 }
 
+/** 繰り上げ返済の方式 */
+export type PrepaymentType = "reduce_payment" | "shorten_term";
+
+export const PREPAYMENT_TYPE_LABEL: Record<PrepaymentType, string> = {
+  reduce_payment: "返済額軽減型",
+  shorten_term: "期間短縮型",
+};
+
+/** 繰り上げ返済（元金へ充当） */
+export interface Prepayment {
+  /** 実行日 (ISO 8601) */
+  date: string;
+  /** 繰上返済額 */
+  amount: number;
+  /** 返済額軽減型 / 期間短縮型 */
+  type: PrepaymentType;
+}
+
 export interface Loan {
   propertyId: string;
   /** 借入先の銀行名（任意） */
@@ -31,4 +49,6 @@ export interface Loan {
    * 先頭要素が当初金利。途中で金利が変わるたびに追加する。
    */
   ratePeriods: RatePeriod[];
+  /** 繰り上げ返済（実行日の昇順） */
+  prepayments?: Prepayment[];
 }

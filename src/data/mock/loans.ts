@@ -14,6 +14,7 @@ export const mockLoans: Loan[] = [
     termMonths: 35 * 12,
     method: "元利均等",
     ratePeriods: [{ from: "2023-01-15", annualRatePercent: 1.8 }],
+    prepayments: [{ date: "2024-06-01", amount: 2_000_000, type: "shorten_term" }],
   },
   {
     propertyId: "prop-002",
