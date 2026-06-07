@@ -19,9 +19,9 @@ import { SearchSelect } from "@/shared/components/ui/SearchSelect";
 import {
   calcAcquisitionTax,
   calcPropertyTaxSettlement,
-  calcRegistrationFee,
   calcStampDuty,
   DEFAULT_BROKERAGE_FEE,
+  DEFAULT_REGISTRATION_FEE,
   simulate,
 } from "@/features/simulation/calc";
 import { addLoan, addProperty, removeLoan, updateProperty } from "@/data/store";
@@ -85,6 +85,9 @@ export function PropertyForm({
   const [brokerageFee, setBrokerageFee] = useState(
     String(initialProperty?.brokerageFee ?? DEFAULT_BROKERAGE_FEE),
   );
+  const [registrationFee, setRegistrationFee] = useState(
+    String(initialProperty?.registrationFee ?? DEFAULT_REGISTRATION_FEE),
+  );
   const [monthlyRent, setMonthlyRent] = useState(
     initialProperty ? String(toSen(initialProperty.monthlyRent)) : "",
   );
@@ -121,9 +124,9 @@ export function PropertyForm({
     purchaseDate,
   ).settlement;
   const brokerageYen = yen(brokerageFee);
-  const registrationFee = calcRegistrationFee(landAssessedYen, buildingAssessedYen).total;
-  // 登記費用は取得原価に含む。逆算では物件価格を求めるための差引経費に加える。
-  const fixedExpense = acqTax + settlement + registrationFee + brokerageYen;
+  const registrationYen = yen(registrationFee);
+  // 登記費用は手入力。取得原価に含み、逆算では物件価格を求めるための差引経費に加える。
+  const fixedExpense = acqTax + settlement + registrationYen + brokerageYen;
 
   // 取得前: 想定家賃と目標利回りから投資総額を算出し、経費を引いて物件価格を逆算
   const yieldPct = Number(targetYield) || 0;
@@ -149,7 +152,8 @@ export function PropertyForm({
     buildingAssessedValue: buildingAssessedYen,
     handoverDate: purchaseDate,
     monthlyRent: rentYen,
-    brokerageFee: yen(brokerageFee),
+    brokerageFee: brokerageYen,
+    registrationFee: registrationYen,
   });
   const hasAssessed = landAssessedYen + buildingAssessedYen > 0;
   const showSim = priceYen > 0 && hasAssessed;
@@ -208,6 +212,13 @@ export function PropertyForm({
       optional: true,
     });
     if (typeof brokChk === "string") return setError(brokChk);
+    const regChk = validateNumber(registrationFee, {
+      label: "登記費用",
+      min: 0,
+      allowZero: true,
+      optional: true,
+    });
+    if (typeof regChk === "string") return setError(regChk);
 
     if (isProspect) {
       const yChk = validateNumber(targetYield, { label: "目標利回り", min: 0.01, max: 100 });
@@ -277,7 +288,7 @@ export function PropertyForm({
       stampDuty: calcStampDuty(priceYen),
       realEstateAcquisitionTax: sim.acquisitionTax.total,
       propertyTaxSettlement: sim.settlement.settlement,
-      registrationFee: sim.registrationFee.total,
+      registrationFee: registrationYen,
       purchaseDate,
       monthlyRent: rentYen,
       emoji: iconForType(type),
@@ -453,7 +464,7 @@ export function PropertyForm({
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">
-              − 経費（取得税＋精算金＋登記{formatYen(registrationFee)}＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
+              − 経費（取得税＋精算金＋登記{formatYen(registrationYen)}＋仲介{formatYen(brokerageYen)}＋印紙{formatYen(calcStampDuty(derivedPrice))}）
             </span>
             <span className="tabular-nums text-slate-800">− {formatYen(acquisitionExpense)}</span>
           </div>
@@ -469,7 +480,7 @@ export function PropertyForm({
       {/* 取得原価（評価額・引き渡し日から自動計算） */}
       <fieldset className="space-y-4 rounded-xl border border-slate-200 p-4">
         <legend className="px-1 text-sm font-semibold text-slate-700">
-          取得原価（諸費用の自動計算）
+          取得原価（諸費用）
         </legend>
 
         <FormRow>
@@ -497,20 +508,33 @@ export function PropertyForm({
           </div>
         </FormRow>
 
-        <div>
-          <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
-          <Input
-            id="brokerageFee"
-            type="text"
-            placeholder="330000"
-            inputMode="numeric"
-            value={withThousands(brokerageFee)}
-            onChange={(e) => setBrokerageFee(sanitizeNumberInput(e.target.value))}
-          />
-          <p className="mt-1 text-xs text-slate-500">
-            印紙代は物件価格から印紙税法に基づき自動計算します。
-          </p>
-        </div>
+        <FormRow>
+          <div>
+            <Label htmlFor="brokerageFee">仲介手数料（円・税込）</Label>
+            <Input
+              id="brokerageFee"
+              type="text"
+              placeholder="330000"
+              inputMode="numeric"
+              value={withThousands(brokerageFee)}
+              onChange={(e) => setBrokerageFee(sanitizeNumberInput(e.target.value))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="registrationFee">登記費用（円）</Label>
+            <Input
+              id="registrationFee"
+              type="text"
+              placeholder="350000"
+              inputMode="numeric"
+              value={withThousands(registrationFee)}
+              onChange={(e) => setRegistrationFee(sanitizeNumberInput(e.target.value))}
+            />
+          </div>
+        </FormRow>
+        <p className="text-xs text-slate-500">
+          登記費用（登録免許税＋司法書士報酬）は手入力です。印紙代は物件価格から印紙税法に基づき自動計算します。
+        </p>
 
         {showSim ? (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm">
@@ -540,16 +564,9 @@ export function PropertyForm({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">
-                登記費用（自動・登録免許税＋司法書士報酬）
-              </span>
+              <span className="text-slate-500">登記費用（手入力）</span>
               <span className="tabular-nums text-slate-800">
-                {formatYen(sim.registrationFee.total)}
-                <span className="ml-1 text-xs text-slate-400">
-                  （登免 土地 {formatYen(sim.registrationFee.landTax)}・建物{" "}
-                  {formatYen(sim.registrationFee.buildingTax)}＋報酬{" "}
-                  {formatYen(sim.registrationFee.scrivenerFee)}）
-                </span>
+                {formatYen(sim.registrationFee)}
               </span>
             </div>
             <div className="flex justify-between">
