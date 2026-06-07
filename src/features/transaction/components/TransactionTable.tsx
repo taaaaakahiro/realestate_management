@@ -4,19 +4,27 @@ import { useMemo, useState } from "react";
 import { Link } from "@/router";
 import type { Transaction, TransactionKind } from "@/features/transaction/types";
 import { Badge } from "@/shared/components/ui/Badge";
-import { Select } from "@/shared/components/ui/Field";
+import { Button, Select } from "@/shared/components/ui/Field";
 import { formatDate, formatYen } from "@/shared/lib/format";
 import { deleteTransaction } from "@/data/store";
+import { downloadTransactionsCsv, printTransactionsPdf } from "@/features/transaction/export";
 
 /** 自動計上（ローン返済）は編集・削除不可。手動登録分のみ操作できる。 */
 const isEditable = (t: Transaction) => !t.id.startsWith("loan-");
 
 const PAGE_SIZE_OPTIONS = [50, 100, 200];
 
-export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
+export function TransactionTable({
+  transactions,
+  title = "取引明細",
+}: {
+  transactions: Transaction[];
+  title?: string;
+}) {
   const [year, setYear] = useState<string>("all");
   const [month, setMonth] = useState<string>("all");
   const [kind, setKind] = useState<TransactionKind | "all">("all");
+  const [category, setCategory] = useState<string>("all");
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const [page, setPage] = useState(1);
 
@@ -26,13 +34,19 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
     return [...set].sort((a, b) => b.localeCompare(a));
   }, [transactions]);
 
+  // 取引が持つ科目の一覧
+  const categories = useMemo(() => {
+    return [...new Set(transactions.map((t) => t.category))];
+  }, [transactions]);
+
   const filtered = useMemo(() => {
     return transactions
       .filter((t) => (year === "all" ? true : t.date.slice(0, 4) === year))
       .filter((t) => (month === "all" ? true : t.date.slice(5, 7) === month))
       .filter((t) => (kind === "all" ? true : t.kind === kind))
+      .filter((t) => (category === "all" ? true : t.category === category))
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [transactions, year, month, kind]);
+  }, [transactions, year, month, kind, category]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = Math.min(page, totalPages);
@@ -80,7 +94,35 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
             </option>
           ))}
         </Select>
-        <span className="ml-auto text-xs text-slate-500">全 {filtered.length} 件</span>
+        <Select
+          value={category}
+          onChange={(e) => reset(setCategory, e.target.value)}
+          className="max-w-[150px]"
+        >
+          <option value="all">すべての科目</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-slate-500">全 {filtered.length} 件</span>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => downloadTransactionsCsv(filtered, title)}
+          >
+            CSV
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => printTransactionsPdf(filtered, title)}
+          >
+            PDF
+          </Button>
+        </div>
       </div>
 
       {rows.length === 0 ? (

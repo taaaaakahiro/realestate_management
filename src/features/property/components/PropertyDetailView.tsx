@@ -348,7 +348,7 @@ export function PropertyDetailView() {
               ＋ この物件に収支を登録
             </Link>
           </div>
-          <TransactionTable transactions={propertyTxns} />
+          <TransactionTable transactions={propertyTxns} title={property.name} />
         </section>
       )}
     </div>
