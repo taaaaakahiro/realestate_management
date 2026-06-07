@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "@/router";
-import { analyzeProperty } from "@/features/analytics/service";
+import { analyzeProperty, type PropertyAnalytics } from "@/features/analytics/service";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
 import { STATUS_LABEL, type PropertyStatus } from "@/features/property/types";
 import { propertyTransactions } from "@/features/loan/service";
 import { TODAY_ISO } from "@/shared/lib/clock";
+import { splitAddress } from "@/shared/lib/address";
 import { Button } from "@/shared/components/ui/Field";
 import { cn } from "@/shared/lib/cn";
 import { useStore, deleteProperties } from "@/data/store";
@@ -58,6 +59,25 @@ export function Properties() {
     .map((p) =>
       analyzeProperty(p, propertyTransactions(p.id, transactions, loans, TODAY_ISO)),
     );
+
+  // 都道府県 → 市区町村 でグループ化
+  const byPref = new Map<string, Map<string, PropertyAnalytics[]>>();
+  for (const a of analytics) {
+    const { prefecture, city } = splitAddress(a.property.address);
+    if (!byPref.has(prefecture)) byPref.set(prefecture, new Map());
+    const cityMap = byPref.get(prefecture)!;
+    if (!cityMap.has(city)) cityMap.set(city, []);
+    cityMap.get(city)!.push(a);
+  }
+  const grouped = [...byPref.entries()]
+    .map(([prefecture, cityMap]) => ({
+      prefecture,
+      count: [...cityMap.values()].reduce((s, items) => s + items.length, 0),
+      cities: [...cityMap.entries()]
+        .map(([city, items]) => ({ city, items }))
+        .sort((a, b) => a.city.localeCompare(b.city, "ja")),
+    }))
+    .sort((a, b) => a.prefecture.localeCompare(b.prefecture, "ja"));
 
   return (
     <div className="space-y-6">
@@ -128,15 +148,35 @@ export function Properties() {
       {analytics.length === 0 ? (
         <p className="text-sm text-slate-500">該当する物件がありません。</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {analytics.map((a) => (
-            <PropertyCard
-              key={a.property.id}
-              analytics={a}
-              selectionMode={selecting}
-              selected={selected.has(a.property.id)}
-              onToggleSelect={() => toggleSelect(a.property.id)}
-            />
+        <div className="space-y-8">
+          {grouped.map((pref) => (
+            <section key={pref.prefecture} className="space-y-4">
+              <h2 className="flex items-baseline gap-2 border-b border-slate-200 pb-1.5 text-lg font-bold text-slate-900">
+                {pref.prefecture}
+                <span className="text-sm font-medium text-slate-400">{pref.count}件</span>
+              </h2>
+              {pref.cities.map((c) => (
+                <div key={c.city} className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-600">
+                    {c.city}
+                    <span className="ml-1.5 text-xs font-medium text-slate-400">
+                      {c.items.length}件
+                    </span>
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {c.items.map((a) => (
+                      <PropertyCard
+                        key={a.property.id}
+                        analytics={a}
+                        selectionMode={selecting}
+                        selected={selected.has(a.property.id)}
+                        onToggleSelect={() => toggleSelect(a.property.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </section>
           ))}
         </div>
       )}
