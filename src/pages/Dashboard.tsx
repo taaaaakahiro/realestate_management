@@ -4,6 +4,7 @@ import {
   summarizePortfolio,
 } from "@/features/analytics/service";
 import { PortfolioSummaryCards } from "@/features/analytics/components/PortfolioSummary";
+import { AssetAllocation } from "@/features/analytics/components/AssetAllocation";
 import { PropertyCard } from "@/features/property/components/PropertyCard";
 import { isInPortfolio } from "@/features/property/types";
 import { propertyTransactions } from "@/features/loan/service";
@@ -40,32 +41,54 @@ export function Dashboard() {
         </p>
       </div>
 
-      <PortfolioSummaryCards summary={summary} />
+      {/* ポートフォリオ概況（保有中の全体指標） */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">ポートフォリオ概況</h2>
+        <PortfolioSummaryCards summary={summary} />
+        {soldProps.length > 0 && (
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardLabel>実現損益（売却済み {soldProps.length} 件）</CardLabel>
+              <CardValue
+                className={realizedTotal >= 0 ? "text-emerald-600" : "text-rose-600"}
+              >
+                {realizedTotal >= 0 ? "+" : "−"}
+                {formatMan(Math.abs(realizedTotal))}
+              </CardValue>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              売却で確定した通算損益（保有期間の収支 ＋ 売却純額）
+            </p>
+          </Card>
+        )}
+      </section>
 
-      {soldProps.length > 0 && (
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardLabel>実現損益（売却済み {soldProps.length} 件）</CardLabel>
-            <CardValue
-              className={realizedTotal >= 0 ? "text-emerald-600" : "text-rose-600"}
-            >
-              {realizedTotal >= 0 ? "+" : "−"}
-              {formatMan(Math.abs(realizedTotal))}
-            </CardValue>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            売却で確定した通算損益（保有期間の収支 ＋ 売却純額）
-          </p>
-        </Card>
+      {/* 資産構成（種別別の割合） */}
+      {analytics.length > 0 && (
+        <section>
+          <AssetAllocation analytics={analytics} />
+        </section>
       )}
 
+      {/* 物件別の回収状況 */}
       <section>
-        <h2 className="mb-3 text-lg font-bold text-slate-900">物件別の回収状況</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ranked.map((a) => (
-            <PropertyCard key={a.property.id} analytics={a} />
-          ))}
-        </div>
+        <h2 className="mb-3 text-lg font-bold text-slate-900">
+          物件別の回収状況
+          <span className="ml-2 text-sm font-medium text-slate-400">
+            保有 {ranked.length} 件
+          </span>
+        </h2>
+        {ranked.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            保有中の物件がありません。物件を登録して「保有中」に切り替えると、ここに回収状況が表示されます。
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {ranked.map((a) => (
+              <PropertyCard key={a.property.id} analytics={a} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
